@@ -1,4 +1,3 @@
-// include/Path.h
 #pragma once
 
 #include "bezier.h" 
@@ -36,8 +35,10 @@ public:
     }
 
     float getTForDistance(float distance) const {
-        if (distance <= 0) return 0.0f;
-        if (distance >= totalLength) return 1.0f;
+        if (distance <= 0) 
+            return 0.0f;
+        if (distance >= totalLength) 
+            return 1.0f;
 
         for (size_t i = 1; i < arcLengthTable.size(); ++i) {
             if (arcLengthTable[i].first >= distance) {
@@ -52,9 +53,17 @@ public:
         return 1.0f;
     }
 
-    float getTotalLength() const { return totalLength; }
-    glm::vec3 getStartPoint() { return getPoint(0.0f); }
-    glm::vec3 getEndPoint() { return getPoint(1.0f); }
+    float getTotalLength() const { 
+        return totalLength; 
+    }
+
+    glm::vec3 getStartPoint() { 
+        return getPoint(0.0f); 
+    }
+
+    glm::vec3 getEndPoint() { 
+        return getPoint(1.0f); 
+    }
 
 private:
     CurvaBezier curva_interna;
