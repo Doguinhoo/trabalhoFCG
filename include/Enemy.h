@@ -39,6 +39,7 @@ public:
     EnemyAttribute             attribute;
     bool                       alive = true;
     std::unique_ptr<IMovement> movement;
+    float                      distanceTraveled = 0.0f; // <-- ADICIONADO
 
     Enemy(const glm::vec3& pos,
           float     radius,
@@ -80,8 +81,13 @@ struct LinearMovement : IMovement {
     glm::vec3 goal;
     LinearMovement(const glm::vec3& g) : goal(g) {}
     void move(Enemy& e, float dt) override {
+        if (glm::distance(e.hitbox.center, goal) < 0.1f) return;
+
         glm::vec3 dir = glm::normalize(goal - e.hitbox.center);
-        e.hitbox.center += dir * e.speed() * dt;
+        float distanceThisFrame = e.speed() * dt;
+
+        e.hitbox.center += dir * distanceThisFrame;
+        e.distanceTraveled += distanceThisFrame; // <-- ATUALIZADO
     }
 };
 
@@ -89,8 +95,12 @@ struct FlyingMovement : IMovement {
     glm::vec3 goal;
     FlyingMovement(const glm::vec3& g) : goal(g) {}
     void move(Enemy& e, float dt) override {
+        if (glm::distance(e.hitbox.center, goal) < 0.1f) return;
+        
         glm::vec3 dir = glm::normalize(goal - e.hitbox.center);
-        e.hitbox.center += dir * e.speed() * dt;
-        // ignora obstáculos de terreno
+        float distanceThisFrame = e.speed() * dt;
+
+        e.hitbox.center += dir * distanceThisFrame;
+        e.distanceTraveled += distanceThisFrame; // <-- ATUALIZADO
     }
 };

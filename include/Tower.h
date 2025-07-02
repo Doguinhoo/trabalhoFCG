@@ -2,27 +2,32 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <glm/gtx/vector_angle.hpp>
 #include <memory>
 #include <vector>
 #include <limits>
 #include "Enemy.h"
 
+// Fwd declaration
+class Tower;
+
 // Interface de targeting
 struct ITargeting {
     virtual ~ITargeting() = default;
     virtual Enemy* pick(const std::vector<Enemy*>& enemies,
-                        const struct Tower& self) = 0;
+                        const Tower& self) = 0;
 };
 
-// Interface de shooting
+// Interface de shooting (ASSINATURA MODIFICADA)
 struct IShooting {
     virtual ~IShooting() = default;
-    virtual void fire(Enemy* target, struct Tower& self) = 0;
+    virtual void fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) = 0;
 };
 
 // Classe genérica de torre
 class Tower {
 public:
+    std::string blueprintName; // <-- ADICIONADO
     glm::vec3 pos;
     float     range;
     float     cooldown;
@@ -31,10 +36,10 @@ public:
     std::unique_ptr<ITargeting> targeting;
     std::unique_ptr<IShooting>  shooting;
 
-    Tower(const glm::vec3& p, float r, float cd,
+    Tower(const std::string& bpName, const glm::vec3& p, float r, float cd,
           std::unique_ptr<ITargeting> t,
           std::unique_ptr<IShooting>  s)
-      : pos(p), range(r), cooldown(cd),
+      : blueprintName(bpName), pos(p), range(r), cooldown(cd),
         targeting(std::move(t)), shooting(std::move(s))
     {}
 
@@ -46,51 +51,70 @@ public:
         timer -= dt;
         if (timer <= 0.f && targeting && shooting) {
             if (Enemy* tgt = targeting->pick(enemies, *this)) {
-                shooting->fire(tgt, *this);
+                shooting->fire(tgt, *this, enemies); // <-- MODIFICADO
                 timer = cooldown;
             }
         }
     }
 };
 
-// Estratégia concreta de targeting
+// =======================================================
+// ESTRATÉGIAS DE TARGETING
+// =======================================================
+
 struct NearestTarget : ITargeting {
-    Enemy* pick(const std::vector<Enemy*>& enemies,
-                const Tower& self) override
-    {
-        Enemy* best = nullptr;
-        float bestD2 = std::numeric_limits<float>::infinity();
-        Hitbox rs = self.rangeHitbox();
-
-        for (auto* e : enemies) {
-            // se estiver fora do alcance, pula
-            if (!rs.intersects(e->hitbox)) continue;
-
-            // dentro do alcance: escolhe o mais próximo
-            glm::vec3 d = e->hitbox.center - self.pos;
-            float d2 = glm::dot(d,d);
-            if (d2 < bestD2) {
-                bestD2 = d2;
-                best   = e;
-            }
-        }
-        return best;
-    }
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
 };
+
+struct WeakestTarget : ITargeting {
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
+};
+
+struct StrongestTarget : ITargeting {
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
+};
+
+struct FirstTarget : ITargeting {
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
+};
+
+struct LastTarget : ITargeting {
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
+};
+
+struct FlyingPriorityTarget : ITargeting {
+    Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) override;
+};
+
+
+// =======================================================
+// ESTRATÉGIAS DE SHOOTING
+// =======================================================
 
 struct ProjectileShot : IShooting {
     float damage, speed;
     ProjectileShot(float dmg, float spd) : damage(dmg), speed(spd) {}
-    void fire(Enemy* target, Tower&) override {
-        target->applyDamage(damage);
-    }
+    void fire(Enemy* target, Tower&, const std::vector<Enemy*>&) override;
 };
 
-struct AoeShot : IShooting {
-    float damage, radius;
-    AoeShot(float dmg, float r) : damage(dmg), radius(r) {}
-    void fire(Enemy* target, Tower&) override {
-        // poderia aplicar área, mas num teste simples ataca só o alvo
-        target->applyDamage(damage);
-    }
+struct FullAoeShot : IShooting {
+    float damagePerSecond;
+    FullAoeShot(float dps) : damagePerSecond(dps) {}
+    void fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) override;
+};
+
+struct ConeShot : IShooting {
+    float damage;
+    float coneAngle; // Em radianos
+    ConeShot(float dmg, float angle_rad) : damage(dmg), coneAngle(angle_rad) {}
+    void fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) override;
+};
+
+struct SplashDamageShot : IShooting {
+    float primaryDamage;
+    float splashDamage;
+    float splashRadius;
+    SplashDamageShot(float p_dmg, float s_dmg, float s_radius)
+        : primaryDamage(p_dmg), splashDamage(s_dmg), splashRadius(s_radius) {}
+    void fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) override;
 };
