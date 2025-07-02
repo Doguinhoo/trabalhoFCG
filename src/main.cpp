@@ -247,6 +247,21 @@ bool press_S = false;
 bool press_D = false;
 bool press_A = false;
 
+// ===============================================
+// VARIÁVEIS DE ESTADO DO JOGO
+// ===============================================
+EnemyManager g_enemyManager;
+Shop g_shop;
+std::vector<std::unique_ptr<Tower>> g_towers;
+float g_playerMoney = 1000.0f;
+std::shared_ptr<Path> g_enemyPath;
+
+// --- NOVAS VARIÁVEIS DE ROUND ---
+int   g_currentRound = 0;
+const int g_totalRounds = 20;
+bool  g_isRoundActive = false; // Controla se inimigos estão vindo
+float g_intermissionTimer = 5.0f; // Tempo de pausa entre os rounds (5s)
+
 // Movimento “dummy” que não faz nada
 struct DummyMovement : IMovement {
     void move(Enemy& , float) override {}
@@ -266,6 +281,7 @@ void teste(){
 
     // 1) Cria uma torre no ponto (0,0,0) com range=5
     Tower tower(
+      "CANNON",
       glm::vec3(0.0f, 0.0f, 0.0f),  // posição
       5.0f,                         // range
       1.0f,                         // cooldown (irrelevante aqui)

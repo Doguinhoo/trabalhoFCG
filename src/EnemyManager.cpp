@@ -1,5 +1,5 @@
 #include "EnemyManager.h"
-#include <algorithm>  // std::remove_if
+#include <algorithm>
 
 void EnemyManager::spawn(std::unique_ptr<Enemy> enemy) {
     enemies.emplace_back(std::move(enemy));
@@ -22,7 +22,9 @@ std::vector<Enemy*> EnemyManager::getEnemyPointers() const {
     std::vector<Enemy*> out;
     out.reserve(enemies.size());
     for (const auto& e : enemies) {
-        out.push_back(e.get());
+        if (e->alive) {
+            out.push_back(e.get());
+        }
     }
     return out;
 }

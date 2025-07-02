@@ -1,0 +1,175 @@
+#include "Tower.h"
+#include <glm/gtx/vector_angle.hpp>
+#include <limits>
+
+// --- Implementação da Classe Tower ---
+
+Tower::Tower(const std::string& bpName, const glm::vec3& p, float r, float cd,
+             std::unique_ptr<ITargeting> t, std::unique_ptr<IShooting> s, std::unique_ptr<IPassiveAbility> pa)
+    : blueprintName(bpName), pos(p), range(r), cooldown(cd),
+      targeting(std::move(t)), shooting(std::move(s)), passiveAbility(std::move(pa)) {}
+
+Hitbox Tower::rangeHitbox() const {
+    return { pos, range };
+}
+
+void Tower::update(float dt, const std::vector<Enemy*>& enemies) {
+    if (!targeting || !shooting) return;
+    timer -= dt;
+    if (timer <= 0.f) {
+        if (Enemy* tgt = targeting->pick(enemies, *this)) {
+            shooting->fire(tgt, *this, enemies);
+            timer = cooldown;
+        }
+    }
+}
+
+void Tower::updateEndOfRound(float& playerMoney) {
+    if (passiveAbility) {
+        passiveAbility->onRoundEnd(*this, playerMoney);
+    }
+}
+
+
+// --- Implementações de ITargeting ---
+
+Enemy* NearestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* best = nullptr;
+    float bestD2 = std::numeric_limits<float>::infinity();
+    Hitbox rs = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !rs.intersects(e->hitbox)) continue;
+        glm::vec3 d = e->hitbox.center - self.pos;
+        float d2 = glm::dot(d,d);
+        if (d2 < bestD2) {
+            bestD2 = d2;
+            best = e;
+        }
+    }
+    return best;
+}
+
+Enemy* WeakestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* weakest = nullptr;
+    float lowestHealth = std::numeric_limits<float>::infinity();
+    Hitbox range = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !range.intersects(e->hitbox)) continue;
+        if (e->health < lowestHealth) {
+            lowestHealth = e->health;
+            weakest = e;
+        }
+    }
+    return weakest;
+}
+
+Enemy* StrongestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* strongest = nullptr;
+    float highestHealth = 0.0f;
+    Hitbox range = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !range.intersects(e->hitbox)) continue;
+        if (e->health > highestHealth) {
+            highestHealth = e->health;
+            strongest = e;
+        }
+    }
+    return strongest;
+}
+
+Enemy* FirstTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* first = nullptr;
+    float maxDistance = -1.0f;
+    Hitbox range = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !range.intersects(e->hitbox)) continue;
+        if (e->distanceTraveled > maxDistance) {
+            maxDistance = e->distanceTraveled;
+            first = e;
+        }
+    }
+    return first;
+}
+
+Enemy* LastTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* last = nullptr;
+    float minDistance = std::numeric_limits<float>::infinity();
+    Hitbox range = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !range.intersects(e->hitbox)) continue;
+        if (e->distanceTraveled < minDistance) {
+            minDistance = e->distanceTraveled;
+            last = e;
+        }
+    }
+    return last;
+}
+
+Enemy* FlyingPriorityTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
+    Enemy* bestFlying = nullptr;
+    float maxDistance = -1.0f;
+    Hitbox range = self.rangeHitbox();
+    for (auto* e : enemies) {
+        if (!e->alive || !range.intersects(e->hitbox)) continue;
+        if (e->attribute == EnemyAttribute::FLYING) {
+            if (e->distanceTraveled > maxDistance) {
+                maxDistance = e->distanceTraveled;
+                bestFlying = e;
+            }
+        }
+    }
+    if (bestFlying) return bestFlying;
+    
+    // Fallback para o inimigo mais avançado se nenhum voador for encontrado
+    FirstTarget fallback;
+    return fallback.pick(enemies, self);
+}
+
+// --- Implementações de IShooting ---
+
+void ProjectileShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>&) {
+    if (target) target->applyDamage(damage);
+}
+
+void FullAoeShot::fire(Enemy*, Tower& self, const std::vector<Enemy*>& all_enemies) {
+    Hitbox range = self.rangeHitbox();
+    float damage_this_tick = damagePerSecond * self.cooldown;
+    for (auto* enemy : all_enemies) {
+        if (enemy && enemy->alive && range.intersects(enemy->hitbox)) {
+            enemy->applyDamage(damage_this_tick);
+        }
+    }
+}
+
+void ConeShot::fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) {
+    if (!target) return;
+    Hitbox range = self.rangeHitbox();
+    glm::vec3 towerToTargetDir = glm::normalize(target->hitbox.center - self.pos);
+    for (auto* enemy : all_enemies) {
+        if (!enemy || !enemy->alive || !range.intersects(enemy->hitbox)) continue;
+        glm::vec3 towerToEnemyDir = glm::normalize(enemy->hitbox.center - self.pos);
+        float angle = glm::angle(towerToTargetDir, towerToEnemyDir);
+        if (angle <= coneAngle / 2.0f) {
+            enemy->applyDamage(damage);
+        }
+    }
+}
+
+void SplashDamageShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>& all_enemies) {
+    if (!target) return;
+    target->applyDamage(primaryDamage);
+    Hitbox splashZone = { target->hitbox.center, splashRadius };
+    for (auto* enemy : all_enemies) {
+        if (!enemy || !enemy->alive || enemy == target) continue;
+        if (splashZone.intersects(enemy->hitbox)) {
+            enemy->applyDamage(splashDamage);
+        }
+    }
+}
+
+// --- Implementações de IPassiveAbility ---
+
+void GenerateIncome::onRoundEnd(Tower& self, float& playerMoney) {
+    playerMoney += incomePerRound;
+    printf("Farm em (%.1f, %.1f) gerou +%d de dinheiro.\n", self.pos.x, self.pos.z, incomePerRound);
+}
