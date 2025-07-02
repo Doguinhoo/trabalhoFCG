@@ -1,4 +1,4 @@
-#include <bezier.h>
+#include "bezier.hpp"
 #include <glm/vec4.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <vector>

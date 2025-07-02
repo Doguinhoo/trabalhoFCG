@@ -1,14 +1,17 @@
 // Based on http://hamelot.io/visualization/opengl-text-without-any-external-libraries/
 //   and on https://github.com/rougier/freetype-gl
-#include <string>
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "textrendering.hpp"
+
+#include <string>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
-#include "utils.h"
+#include "matrices.hpp"
+#include "utils.hpp"
 #include "dejavufont.h"
 
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Função definida em main.cpp
@@ -35,8 +38,7 @@ const GLchar* const textfragmentshader_source = ""
 "}\n"
 "\0";
 
-void TextRendering_LoadShader(const GLchar* const shader_string, GLuint shader_id)
-{
+void TextRendering_LoadShader(const GLchar* const shader_string, GLuint shader_id) {
     // Define o código do shader, contido na string "shader_string"
     glShaderSource(shader_id, 1, &shader_string, NULL);
 
@@ -87,8 +89,7 @@ GLuint textVBO;
 GLuint textprogram_id;
 GLuint texttexture_id;
 
-void TextRendering_Init()
-{
+void TextRendering_Init() {
     GLuint sampler;
 
     glGenBuffers(1, &textVBO);
@@ -144,8 +145,7 @@ void TextRendering_Init()
 
 float textscale = 1.5f;
 
-void TextRendering_PrintString(GLFWwindow* window, const std::string &str, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintString(GLFWwindow* window, const std::string &str, float x, float y, float scale) {
     scale *= textscale;
     int width, height;
     glfwGetWindowSize(window, &width, &height);
@@ -211,22 +211,19 @@ void TextRendering_PrintString(GLFWwindow* window, const std::string &str, float
     }
 }
 
-float TextRendering_LineHeight(GLFWwindow* window)
-{
+float TextRendering_LineHeight(GLFWwindow* window) {
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     return dejavufont.height / height * textscale;
 }
 
-float TextRendering_CharWidth(GLFWwindow* window)
-{
+float TextRendering_CharWidth(GLFWwindow* window) {
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     return dejavufont.glyphs[32].advance_x / width * textscale;
 }
 
-void TextRendering_PrintMatrix(GLFWwindow* window, glm::mat4 M, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintMatrix(GLFWwindow* window, glm::mat4 M, float x, float y, float scale/*  = 1.0f */) {
     char buffer[40];
     float lineheight = TextRendering_LineHeight(window) * scale;
 
@@ -240,8 +237,7 @@ void TextRendering_PrintMatrix(GLFWwindow* window, glm::mat4 M, float x, float y
     TextRendering_PrintString(window, buffer, x, y - 3*lineheight, scale);
 }
 
-void TextRendering_PrintVector(GLFWwindow* window, glm::vec4 v, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintVector(GLFWwindow* window, glm::vec4 v, float x, float y, float scale/*  = 1.0f */) {
     char buffer[10];
     float lineheight = TextRendering_LineHeight(window) * scale;
 
@@ -255,8 +251,7 @@ void TextRendering_PrintVector(GLFWwindow* window, glm::vec4 v, float x, float y
     TextRendering_PrintString(window, buffer, x, y - 3*lineheight, scale);
 }
 
-void TextRendering_PrintMatrixVectorProduct(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintMatrixVectorProduct(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale/*  = 1.0f */) {
     char buffer[70];
     float lineheight = TextRendering_LineHeight(window) * scale;
 
@@ -271,8 +266,7 @@ void TextRendering_PrintMatrixVectorProduct(GLFWwindow* window, glm::mat4 M, glm
     TextRendering_PrintString(window, buffer, x, y - 3*lineheight, scale);
 }
 
-void TextRendering_PrintMatrixVectorProductMoreDigits(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintMatrixVectorProductMoreDigits(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale/*  = 1.0f */) {
     char buffer[70];
     float lineheight = TextRendering_LineHeight(window) * scale;
 
@@ -287,8 +281,7 @@ void TextRendering_PrintMatrixVectorProductMoreDigits(GLFWwindow* window, glm::m
     TextRendering_PrintString(window, buffer, x, y - 3*lineheight, scale);
 }
 
-void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale = 1.0f)
-{
+void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M, glm::vec4 v, float x, float y, float scale/*  = 1.0f */) {
     auto r = M*v;
     auto w = r[3];
 
@@ -303,4 +296,117 @@ void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M,
     TextRendering_PrintString(window, buffer, x, y - 2*lineheight, scale);
     snprintf(buffer, 90, "[%+0.2f %+0.2f %+0.2f %+0.2f][%+0.2f]     [%+0.2f]        [%+0.2f]\n", M[0][3], M[1][3], M[2][3], M[3][3], v[3], r[3], r[3]/w);
     TextRendering_PrintString(window, buffer, x, y - 3*lineheight, scale);
+}
+
+// Esta função recebe um vértice com coordenadas de modelo p_model e passa o
+// mesmo por todos os sistemas de coordenadas armazenados nas matrizes model,
+// view, e projection; e escreve na tela as matrizes e pontos resultantes
+// dessas transformações.
+void TextRendering_ShowModelViewProjection(
+    GLFWwindow* window,
+    glm::mat4 projection,
+    glm::mat4 view,
+    glm::mat4 model,
+    glm::vec4 p_model
+)
+{
+    glm::vec4 p_world = model*p_model;
+    glm::vec4 p_camera = view*p_world;
+    glm::vec4 p_clip = projection*p_camera;
+    glm::vec4 p_ndc = p_clip / p_clip.w;
+
+    float pad = TextRendering_LineHeight(window);
+
+    TextRendering_PrintString(window, " Model matrix             Model     In World Coords.", -1.0f, 1.0f-pad, 1.0f);
+    TextRendering_PrintMatrixVectorProduct(window, model, p_model, -1.0f, 1.0f-2*pad, 1.0f);
+
+    TextRendering_PrintString(window, "                                        |  ", -1.0f, 1.0f-6*pad, 1.0f);
+    TextRendering_PrintString(window, "                            .-----------'  ", -1.0f, 1.0f-7*pad, 1.0f);
+    TextRendering_PrintString(window, "                            V              ", -1.0f, 1.0f-8*pad, 1.0f);
+
+    TextRendering_PrintString(window, " View matrix              World     In Camera Coords.", -1.0f, 1.0f-9*pad, 1.0f);
+    TextRendering_PrintMatrixVectorProduct(window, view, p_world, -1.0f, 1.0f-10*pad, 1.0f);
+
+    TextRendering_PrintString(window, "                                        |  ", -1.0f, 1.0f-14*pad, 1.0f);
+    TextRendering_PrintString(window, "                            .-----------'  ", -1.0f, 1.0f-15*pad, 1.0f);
+    TextRendering_PrintString(window, "                            V              ", -1.0f, 1.0f-16*pad, 1.0f);
+
+    TextRendering_PrintString(window, " Projection matrix        Camera                    In NDC", -1.0f, 1.0f-17*pad, 1.0f);
+    TextRendering_PrintMatrixVectorProductDivW(window, projection, p_camera, -1.0f, 1.0f-18*pad, 1.0f);
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    glm::vec2 a = glm::vec2(-1, -1);
+    glm::vec2 b = glm::vec2(+1, +1);
+    glm::vec2 p = glm::vec2( 0,  0);
+    glm::vec2 q = glm::vec2(width, height);
+
+    glm::mat4 viewport_mapping = Matrix(
+        (q.x - p.x)/(b.x-a.x), 0.0f, 0.0f, (b.x*p.x - a.x*q.x)/(b.x-a.x),
+        0.0f, (q.y - p.y)/(b.y-a.y), 0.0f, (b.y*p.y - a.y*q.y)/(b.y-a.y),
+        0.0f , 0.0f , 1.0f , 0.0f ,
+        0.0f , 0.0f , 0.0f , 1.0f
+    );
+
+    TextRendering_PrintString(window, "                                                       |  ", -1.0f, 1.0f-22*pad, 1.0f);
+    TextRendering_PrintString(window, "                            .--------------------------'  ", -1.0f, 1.0f-23*pad, 1.0f);
+    TextRendering_PrintString(window, "                            V                           ", -1.0f, 1.0f-24*pad, 1.0f);
+
+    TextRendering_PrintString(window, " Viewport matrix           NDC      In Pixel Coords.", -1.0f, 1.0f-25*pad, 1.0f);
+    TextRendering_PrintMatrixVectorProductMoreDigits(window, viewport_mapping, p_ndc, -1.0f, 1.0f-26*pad, 1.0f);
+}
+
+// Escrevemos na tela os ângulos de Euler definidos nas variáveis globais
+// g_AngleX, g_AngleY, e g_AngleZ.
+void TextRendering_ShowEulerAngles(GLFWwindow* window, float angleX, float angleY, float angleZ) {
+    float pad = TextRendering_LineHeight(window);
+
+    char buffer[80];
+    snprintf(buffer, 80, "Euler Angles rotation matrix = Z(%.2f)*Y(%.2f)*X(%.2f)\n", angleZ, angleY, angleX);
+
+    TextRendering_PrintString(window, buffer, -1.0f+pad/10, -1.0f+2*pad/10, 1.0f);
+}
+
+// Escrevemos na tela qual matriz de projeção está sendo utilizada.
+void TextRendering_ShowProjection(GLFWwindow* window, bool type) {
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    if ( type )
+        TextRendering_PrintString(window, "Perspective", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
+    else
+        TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
+}
+
+// Escrevemos na tela o número de quadros renderizados por segundo (frames per
+// second).
+void TextRendering_ShowFramesPerSecond(GLFWwindow* window) {
+    // Variáveis estáticas (static) mantém seus valores entre chamadas
+    // subsequentes da função!
+    static float old_seconds = (float)glfwGetTime();
+    static int   ellapsed_frames = 0;
+    static char  buffer[20] = "?? fps";
+    static int   numchars = 7;
+
+    ellapsed_frames += 1;
+
+    // Recuperamos o número de segundos que passou desde a execução do programa
+    float seconds = (float)glfwGetTime();
+
+    // Número de segundos desde o último cálculo do fps
+    float ellapsed_seconds = seconds - old_seconds;
+
+    if ( ellapsed_seconds > 1.0f )
+    {
+        numchars = snprintf(buffer, 20, "%.2f fps", ellapsed_frames / ellapsed_seconds);
+    
+        old_seconds = seconds;
+        ellapsed_frames = 0;
+    }
+
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    TextRendering_PrintString(window, buffer, 1.0f-(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
 }
