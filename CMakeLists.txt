@@ -8,6 +8,7 @@
 set(SOURCES
   src/main.cpp
   src/matrices.cpp
+  src/rendering.cpp
   src/bezier.cpp
   src/textrendering.cpp
   src/tiny_obj_loader.cpp

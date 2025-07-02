@@ -10,11 +10,10 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
+#include "rendering.hpp"
 #include "matrices.hpp"
 #include "utils.hpp"
 #include "dejavufont.h"
-
-GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Função definida em main.cpp
 
 const GLchar* const textvertexshader_source = ""
 "#version 330\n"
