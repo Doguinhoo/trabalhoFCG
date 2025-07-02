@@ -48,6 +48,8 @@
 #include "utils.h"
 #include "matrices.h"
 
+#include <bezier.h>
+
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
 struct ObjModel
@@ -331,6 +333,10 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    glm::vec4 pontos[] = {glm::vec4(-1, 0, 0, 1), glm::vec4(-1, 1, 0, 1), glm::vec4(1, 1, 0, 1), glm::vec4(1, 0, 0, 1)};
+    CurvaBezier curva(pontos, 4);
+    float pos_curva = 0.0;
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -413,27 +419,36 @@ int main(int argc, char* argv[])
         #define BUNNY  1
         #define PLANE  2
 
+        printf("t: %f\n", pos_curva);
+        glm::vec4 pos_esfera = curva.calcula_ponto(pos_curva);
+        printf("pos_esfera: ");
+        std::cout << glm::to_string(pos_esfera);
+        printf("\n\n");
+
         // Desenhamos o modelo da esfera
-        model = Matrix_Translate(-1.0f,0.0f,0.0f)
-              * Matrix_Rotate_Z(0.6f)
-              * Matrix_Rotate_X(0.2f)
-              * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
+        model = Matrix_Translate(pos_esfera.x,pos_esfera.y,pos_esfera.z)
+            //   * Matrix_Rotate_Z(0.6f)
+            //   * Matrix_Rotate_X(0.2f)
+            //   * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f)
+              * Matrix_Scale(0.1, 0.1, 0.1);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SPHERE);
         DrawVirtualObject("the_sphere");
 
-        // Desenhamos o modelo do coelho
-        model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, BUNNY);
-        DrawVirtualObject("the_bunny");
+        pos_curva = pos_curva + 0.001 - floor(pos_curva);
 
-        // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, PLANE);
-        DrawVirtualObject("the_plane");
+        // // Desenhamos o modelo do coelho
+        // model = Matrix_Translate(1.0f,0.0f,0.0f)
+        //       * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
+        // glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        // glUniform1i(g_object_id_uniform, BUNNY);
+        // DrawVirtualObject("the_bunny");
+
+        // // Desenhamos o plano do chão
+        // model = Matrix_Translate(0.0f,-1.1f,0.0f);
+        // glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        // glUniform1i(g_object_id_uniform, PLANE);
+        // DrawVirtualObject("the_plane");
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
