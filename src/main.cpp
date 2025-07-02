@@ -20,6 +20,8 @@
 #include <cstdlib>
 
 // Headers abaixo são específicos de C++
+using namespace std;
+#include <iostream>
 #include <map>
 #include <stack>
 #include <string>
@@ -41,12 +43,18 @@
 
 // Headers da biblioteca para carregar modelos obj
 #include <tiny_obj_loader.h>
-
 #include <stb_image.h>
 
 // Headers locais, definidos na pasta "include/"
 #include "utils.h"
 #include "matrices.h"
+
+// Headers das estruturas
+#include "EnemyManager.h"
+#include "Enemy.h"
+#include "Shop.h"
+#include "TowerBlueprint.h"
+#include "Tower.h"
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -224,8 +232,91 @@ GLint g_bbox_max_uniform;
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
 
+// pos inicial
+glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
+float prev_time = (float)glfwGetTime();
+float delta_t;
+
+
+// velocidade da camera
+float speed = 0.5f;
+
+// Teclas de movimentação
+bool press_W = false;
+bool press_S = false;
+bool press_D = false;
+bool press_A = false;
+
+// Movimento “dummy” que não faz nada
+struct DummyMovement : IMovement {
+    void move(Enemy& , float) override {}
+};
+
+// Fábrica de targeting “nearest”
+static std::unique_ptr<ITargeting> makeNearest() {
+    return std::unique_ptr<NearestTarget>(new NearestTarget());
+}
+// Fábrica de shooting sem dano
+static std::unique_ptr<IShooting> makeDummyShot() {
+    return std::unique_ptr<ProjectileShot>(new ProjectileShot(0.0f, 0.0f));
+}
+
+void teste(){
+      std::cout << "=== TESTE DE ALCANCE DA TORRE ===\n";
+
+    // 1) Cria uma torre no ponto (0,0,0) com range=5
+    Tower tower(
+      glm::vec3(0.0f, 0.0f, 0.0f),  // posição
+      5.0f,                         // range
+      1.0f,                         // cooldown (irrelevante aqui)
+      makeNearest(),
+      makeDummyShot()
+    );
+
+    // 2) Cria dois inimigos com hitbox radius=1:
+    //    - Um a 5 unidades (5 <= 5+1 => dentro do alcance)
+    //    - Outro a 7 unidades (7 > 5+1 => fora do alcance)
+    std::unique_ptr<Enemy> e_in(
+      new Enemy(
+        glm::vec3(5.0f, 0.0f, 0.0f), // pos
+        1.0f,                        // hitbox radius
+        10.0f,                       // health
+        0.0f,                        // speed
+        EnemyAttribute::FAST,
+        std::unique_ptr<IMovement>(new DummyMovement())
+      )
+    );
+    std::unique_ptr<Enemy> e_out(
+      new Enemy(
+        glm::vec3(7.0f, 0.0f, 0.0f), // pos
+        1.0f,                        // hitbox radius
+        10.0f,                       // health
+        0.0f,                        // speed
+        EnemyAttribute::FAST,
+        std::unique_ptr<IMovement>(new DummyMovement())
+      )
+    );
+
+    // 3) Gera a esfera de alcance da torre
+    Hitbox range = tower.rangeHitbox();
+
+    // 4) Testa interseção e exibe resultado
+    bool inside  = range.intersects(e_in->hitbox);
+    bool outside = range.intersects(e_out->hitbox);
+
+    std::cout
+      << "Inimigo em 5.0 (raio 1.0): dentro do alcance? "
+      << (inside  ? "SIM\n" : "NAO\n");
+    std::cout
+      << "Inimigo em 7.0 (raio 1.0): dentro do alcance? "
+      << (outside ? "SIM\n" : "NAO\n");
+
+    std::cout << "\n=== FIM DO TESTE ===\n";
+}
+
 int main(int argc, char* argv[])
 {
+    teste();
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
     int success = glfwInit();
@@ -368,13 +459,31 @@ int main(int argc, char* argv[])
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
 
-        // Computamos a matriz "View" utilizando os parâmetros da câmera para
-        // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
-
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
+        // Computamos a posição da câmera utilizando coordenadas esféricas
+        float current_time = (float)glfwGetTime();
+        delta_t = current_time - prev_time;
+        prev_time = current_time;
+                // Calculamos os vetores da base da câmera
+        glm::vec4 w = -camera_view_vector / norm(camera_view_vector);
+        glm::vec4 u = crossproduct(camera_up_vector, w);
+        
+        if (press_W)
+            g_camera_position_c -= w * speed * delta_t;
+        if (press_A)
+            g_camera_position_c -= u * speed * delta_t;
+        if (press_S)
+            g_camera_position_c += w * speed * delta_t;
+        if (press_D)
+            g_camera_position_c += u * speed * delta_t;
+            
+        camera_position_c = g_camera_position_c;
+
+                // Computamos a matriz "View" utilizando os parâmetros da câmera para
+        // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
+        glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
@@ -408,6 +517,7 @@ int main(int argc, char* argv[])
         // efetivamente aplicadas em todos os pontos.
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
+
 
         #define SPHERE 0
         #define BUNNY  1
@@ -1221,6 +1331,35 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         LoadShadersFromFiles();
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
+    }
+
+        if (key == GLFW_KEY_W)
+    {
+        if (action == GLFW_PRESS)
+            press_W = true;
+        else if (action == GLFW_RELEASE)
+            press_W = false;
+    }
+    if (key == GLFW_KEY_S)
+    {
+        if (action == GLFW_PRESS)
+            press_S = true;
+        else if (action == GLFW_RELEASE)
+            press_S = false;
+    }
+    if (key == GLFW_KEY_A)
+    {
+        if (action == GLFW_PRESS)
+            press_A = true;
+        else if (action == GLFW_RELEASE)
+            press_A = false;
+    }
+    if (key == GLFW_KEY_D)
+    {
+        if (action == GLFW_PRESS)
+            press_D = true;
+        else if (action == GLFW_RELEASE)
+            press_D = false;
     }
 }
 
