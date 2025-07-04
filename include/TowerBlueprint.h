@@ -14,4 +14,9 @@ struct TowerBlueprint {
     float       cooldown;
     std::function<std::unique_ptr<ITargeting>()> targetingFactory;
     std::function<std::unique_ptr<IShooting>()>  shootingFactory;
+    std::function<std::unique_ptr<IPassiveAbility>()> passiveFactory;
+
+    // upgrade
+    int         upgradeCost = 0;
+    std::string nextUpgradeName; 
 };

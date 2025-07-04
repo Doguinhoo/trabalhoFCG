@@ -25,35 +25,52 @@ public:
         auto shooting = bp.shootingFactory ? bp.shootingFactory() : nullptr;
         auto passive = bp.passiveFactory ? bp.passiveFactory() : nullptr;
 
-        return std::make_unique<Tower>(bp.name, pos, bp.range, bp.cooldown, std::move(targeting), std::move(shooting), std::move(passive));
+        return std::unique_ptr<Tower>(new Tower(
+            bp.name, pos, bp.range, bp.cooldown,
+            std::move(targeting), std::move(shooting), std::move(passive)
+        ));
     }
 
     std::unique_ptr<Tower> upgrade(Tower& oldTower, float& playerMoney) {
+        // Encontra o blueprint da torre ATUAL. Se não achar, falha.
         auto it_current = blueprints.find(oldTower.blueprintName);
-        if (it_current == blueprints.end()) return nullptr;
-
+        if (it_current == blueprints.end()) {
+            return nullptr;
+        }
         const auto& current_bp = it_current->second;
-        if (current_bp.nextUpgradeName.empty() || playerMoney < current_bp.upgradeCost) return nullptr;
 
+        // Verifica se a torre atual PODE ser melhorada. Se não tiver nome de upgrade
+        //  ou se o jogador não tiver dinheiro, falha.
+        if (current_bp.nextUpgradeName.empty() || playerMoney < current_bp.upgradeCost) {
+            return nullptr;
+        }
+
+        // Encontra o blueprint da PRÓXIMA torre. Se não achar, falha.
         auto it_next = blueprints.find(current_bp.nextUpgradeName);
-        if (it_next == blueprints.end()) return nullptr;
+        if (it_next == blueprints.end()) {
+            return nullptr;
+        }
         
+        // Somente se todas as verificações acima passarem, deduz o dinheiro.
         playerMoney -= current_bp.upgradeCost;
-        const auto& next_bp = it_next->second;
 
+        // Cria e retorna a nova torre.
+        const auto& next_bp = it_next->second;
         auto targeting = next_bp.targetingFactory ? next_bp.targetingFactory() : nullptr;
         auto shooting = next_bp.shootingFactory ? next_bp.shootingFactory() : nullptr;
         auto passive = next_bp.passiveFactory ? next_bp.passiveFactory() : nullptr;
 
-        return std::make_unique<Tower>(next_bp.name, oldTower.pos, next_bp.range, next_bp.cooldown, std::move(targeting), std::move(shooting), std::move(passive));
+        return std::unique_ptr<Tower>(new Tower(
+            next_bp.name, oldTower.pos, next_bp.range, next_bp.cooldown,
+            std::move(targeting), std::move(shooting), std::move(passive)
+        ));
     }
-
     std::vector<std::string> availableTowers() const {
         std::vector<std::string> out;
         out.reserve(blueprints.size());
-        for (const auto& kv : blueprints) {
-            if (kv.second.cost > 0) {
-                 out.push_back(kv.first);
+        for (const auto& bp : blueprints) {
+            if (bp.second.cost > 0) {
+                 out.push_back(bp.first);
             }
         }
         return out;

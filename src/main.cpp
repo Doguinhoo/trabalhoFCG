@@ -55,6 +55,7 @@ using namespace std;
 #include "Shop.h"
 #include "TowerBlueprint.h"
 #include "Tower.h"
+#include "Path.h"
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -276,63 +277,95 @@ static std::unique_ptr<IShooting> makeDummyShot() {
     return std::unique_ptr<ProjectileShot>(new ProjectileShot(0.0f, 0.0f));
 }
 
-void teste(){
-      std::cout << "=== TESTE DE ALCANCE DA TORRE ===\n";
+void teste()
+{
+    printf("--- INICIANDO TESTE DE ECONOMIA E UPGRADES ---\n");
 
-    // 1) Cria uma torre no ponto (0,0,0) com range=5
-    Tower tower(
-      "CANNON",
-      glm::vec3(0.0f, 0.0f, 0.0f),  // posição
-      5.0f,                         // range
-      1.0f,                         // cooldown (irrelevante aqui)
-      makeNearest(),
-      makeDummyShot()
-    );
+    Shop shop;
+    float playerMoney = 200.0f;
 
-    // 2) Cria dois inimigos com hitbox radius=1:
-    //    - Um a 5 unidades (5 <= 5+1 => dentro do alcance)
-    //    - Outro a 7 unidades (7 > 5+1 => fora do alcance)
-    std::unique_ptr<Enemy> e_in(
-      new Enemy(
-        glm::vec3(5.0f, 0.0f, 0.0f), // pos
-        1.0f,                        // hitbox radius
-        10.0f,                       // health
-        0.0f,                        // speed
-        EnemyAttribute::FAST,
-        std::unique_ptr<IMovement>(new DummyMovement())
-      )
-    );
-    std::unique_ptr<Enemy> e_out(
-      new Enemy(
-        glm::vec3(7.0f, 0.0f, 0.0f), // pos
-        1.0f,                        // hitbox radius
-        10.0f,                       // health
-        0.0f,                        // speed
-        EnemyAttribute::FAST,
-        std::unique_ptr<IMovement>(new DummyMovement())
-      )
-    );
+    // --- Blueprints ---
+    // Farm
+    TowerBlueprint farm_bp;
+    farm_bp.name = "Farm_V1";
+    farm_bp.cost = 100;
+    farm_bp.passiveFactory = []() { return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
+    shop.registerTower(farm_bp);
 
-    // 3) Gera a esfera de alcance da torre
-    Hitbox range = tower.rangeHitbox();
+    // Canhão Nível 1
+    TowerBlueprint cannon_v1_bp;
+    cannon_v1_bp.name = "Cannon_V1";
+    cannon_v1_bp.cost = 75;
+    cannon_v1_bp.range = 7.0f;
+    cannon_v1_bp.cooldown = 1.5f;
+    cannon_v1_bp.targetingFactory = []() { return std::unique_ptr<FirstTarget>(new FirstTarget()); };
+    cannon_v1_bp.shootingFactory = []() { return std::unique_ptr<ProjectileShot>(new ProjectileShot(10, 10)); };
+    cannon_v1_bp.upgradeCost = 80;
+    cannon_v1_bp.nextUpgradeName = "Cannon_V2";
+    shop.registerTower(cannon_v1_bp);
 
-    // 4) Testa interseção e exibe resultado
-    bool inside  = range.intersects(e_in->hitbox);
-    bool outside = range.intersects(e_out->hitbox);
+    // Canhão Nível 2 (com sintaxe revisada)
+    TowerBlueprint cannon_v2_bp;
+    cannon_v2_bp.name = "Cannon_V2";
+    cannon_v2_bp.cost = 0;
+    cannon_v2_bp.range = 9.0f;
+    cannon_v2_bp.cooldown = 1.2f;
+    cannon_v2_bp.targetingFactory = []() { return std::unique_ptr<FirstTarget>(new FirstTarget()); };
+    cannon_v2_bp.shootingFactory = []() { return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 10)); };
+    shop.registerTower(cannon_v2_bp);
 
-    std::cout
-      << "Inimigo em 5.0 (raio 1.0): dentro do alcance? "
-      << (inside  ? "SIM\n" : "NAO\n");
-    std::cout
-      << "Inimigo em 7.0 (raio 1.0): dentro do alcance? "
-      << (outside ? "SIM\n" : "NAO\n");
+    // --- Comprando Torres ---
+    std::vector<std::unique_ptr<Tower>> towers;
+    towers.push_back(shop.buy("Farm_V1", playerMoney, {5.0f, 0.0f, 0.0f}));
+    towers.push_back(shop.buy("Cannon_V1", playerMoney, {-5.0f, 0.0f, 0.0f}));
+    
+    float money_after_buy = playerMoney;
+    printf("Setup inicial: %.1f de dinheiro, %zu torres construídas.\n", money_after_buy, towers.size());
+    assert(money_after_buy == 25.0f);
 
-    std::cout << "\n=== FIM DO TESTE ===\n";
+    // --- Teste de Renda ---
+    printf("\nSimulando o fim de um round...\n");
+    for (const auto& tower : towers) { tower->updateEndOfRound(playerMoney); }
+    printf("Dinheiro após a renda da Farm: %.1f\n", playerMoney);
+    assert(playerMoney == 75.0f);
+
+    // --- Teste de Upgrade com Sucesso ---
+    playerMoney += 100.0f; // Adiciona dinheiro para o teste passar (total = 175)
+    float money_before_upgrade = playerMoney;
+    printf("\nAdicionando dinheiro. Tentando upgrade (custo: %d)...\n", cannon_v1_bp.upgradeCost);
+    
+    // A lógica para encontrar e substituir a torre
+    std::unique_ptr<Tower>* cannon_ptr = nullptr;
+    for (auto& t : towers) {
+        if (t->blueprintName == "Cannon_V1") {
+            cannon_ptr = &t;
+            break;
+        }
+    }
+    assert(cannon_ptr != nullptr);
+    
+    auto upgraded_tower = shop.upgrade(**cannon_ptr, playerMoney);
+    
+    // Verificação final
+    assert(upgraded_tower != nullptr); // AQUI NÃO DEVE MAIS FALHAR
+    
+    if (upgraded_tower) {
+        *cannon_ptr = std::move(upgraded_tower);
+    }
+    
+    printf("Dinheiro final: %.1f\n", playerMoney);
+    const auto& final_cannon = *cannon_ptr;
+    printf("Blueprint do canhão agora é: '%s', com range de %.1f\n", final_cannon->blueprintName.c_str(), final_cannon->range);
+
+    assert(playerMoney == (money_before_upgrade - cannon_v1_bp.upgradeCost));
+    assert(final_cannon->blueprintName == "Cannon_V2");
+    assert(final_cannon->range == 9.0f);
+
+    printf("\n--- TESTE DE ECONOMIA E UPGRADES CONCLUÍDO COM SUCESSO! ---\n\n");
 }
 
 int main(int argc, char* argv[])
 {
-    teste();
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
     int success = glfwInit();
@@ -341,7 +374,6 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: glfwInit() failed.\n");
         std::exit(EXIT_FAILURE);
     }
-
     // Definimos o callback para impressão de erros da GLFW no terminal
     glfwSetErrorCallback(ErrorCallback);
 
@@ -407,6 +439,7 @@ int main(int argc, char* argv[])
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    LoadTextureImage("../../data/rocket_tower.jpg");                 // TextureImage2
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -420,6 +453,11 @@ int main(int argc, char* argv[])
     ObjModel planemodel("../../data/plane.obj");
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
+
+    ObjModel rocketmodel("../../data/rocket_tower.obj");
+    ComputeNormals(&rocketmodel);
+    BuildTrianglesAndAddToVirtualScene(&rocketmodel);
+
 
     if ( argc > 1 )
     {
@@ -538,7 +576,7 @@ int main(int argc, char* argv[])
         #define SPHERE 0
         #define BUNNY  1
         #define PLANE  2
-
+        #define ROCKET 3
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
@@ -560,6 +598,12 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
+
+        // Desenhamos o AmongUS
+        model = Matrix_Translate(2.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, ROCKET);
+        DrawVirtualObject("the_rocket_tower");
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -586,7 +630,7 @@ int main(int argc, char* argv[])
         // pela biblioteca GLFW.
         glfwPollEvents();
     }
-
+    teste();
     // Finalizamos o uso dos recursos do sistema operacional
     glfwTerminate();
 
@@ -727,6 +771,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
     glUseProgram(0);
 }
 

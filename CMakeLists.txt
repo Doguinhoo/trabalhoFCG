@@ -7,6 +7,8 @@
 # ser compilados.
 set(SOURCES
   src/EnemyManager.cpp 
+  src/bezier.cpp
+  src/Tower.cpp
   src/main.cpp
   src/textrendering.cpp
   src/tiny_obj_loader.cpp

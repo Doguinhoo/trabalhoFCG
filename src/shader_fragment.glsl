@@ -22,6 +22,7 @@ uniform mat4 projection;
 #define SPHERE 0
 #define BUNNY  1
 #define PLANE  2
+#define ROCKET_TOWER 3
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -64,10 +65,14 @@ void main()
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
 
+    // Fator de iluminação de Lambert, calculado uma vez para todos os objetos.
+    float lambert = max(0.0, dot(n,l));
+
     // Coordenadas de textura U e V
     float U = 0.0;
     float V = 0.0;
 
+    // ETAPA 1: CALCULAR AS COORDENADAS DE TEXTURA (U, V) PARA O OBJETO ATUAL
     if ( object_id == SPHERE )
     {
         // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
@@ -77,11 +82,11 @@ void main()
         // "bbox_center" definida abaixo.
 
         // Você deve utilizar:
-        //   função 'length( )' : comprimento Euclidiano de um vetor
-        //   função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
-        //   função 'asin( )'   : seno inverso.
-        //   constante M_PI
-        //   variável position_model
+        //  função 'length( )' : comprimento Euclidiano de um vetor
+        //  função 'atan( , )' : arcotangente. Veja https://en.wikipedia.org/wiki/Atan2.
+        //  função 'asin( )'   : seno inverso.
+        //  constante M_PI
+        //  variável position_model
 
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
         vec4 pv = position_model - bbox_center;
@@ -115,21 +120,35 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE )
+    else if ( object_id == PLANE || object_id == ROCKET_TOWER )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
     }
 
-    // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
-    vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
-    vec3 Kd1 = texture(TextureImage1, vec2(U,V)).rgb;
 
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
 
-    color.rgb = Kd0 * (lambert + 0.01) + Kd1 * max(0, (1 - lambert*10));
+    // ETAPA 2: CALCULAR A COR FINAL COM BASE NO OBJETO
+    if ( object_id == SPHERE )
+    {
+        // Esfera usa a mistura de dia/noite com as texturas 0 e 1
+        vec3 kd_dia = texture(TextureImage0, vec2(U,V)).rgb;
+        vec3 kd_noite = texture(TextureImage1, vec2(U,V)).rgb;
+        color.rgb = kd_dia * (lambert + 0.05) + kd_noite * max(0.0, (1.0 - lambert * 10.0));
+    }
+    else if ( object_id == ROCKET_TOWER )
+    {
+        // A torre foguete usa apenas sua própria textura (TextureImage3)
+        vec3 kd_rocket = texture(TextureImage2, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; // Iluminação simples + luz ambiente
+    }
+    else // Para todos os outros objetos (BUNNY, PLANE)
+    {
+        // Lógica padrão: usa a primeira textura com iluminação simples
+        vec3 kd_default = texture(TextureImage0, vec2(U,V)).rgb;
+        color.rgb = kd_default * lambert + kd_default * 0.1;
+    }
 
     // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
     // necessário:
@@ -143,10 +162,9 @@ void main()
     //    suas distâncias para a câmera (desenhando primeiro objetos
     //    transparentes que estão mais longe da câmera).
     // Alpha default = 1 = 100% opaco = 0% transparente
-    color.a = 1;
+    color.a = 1.0;
 
     // Cor final com correção gamma, considerando monitor sRGB.
     // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
-    color.rgb = pow(color.rgb, vec3(1.0,1.0,1.0)/2.2);
-} 
-
+    color.rgb = pow(color.rgb, vec3(1.0/2.2));
+}
