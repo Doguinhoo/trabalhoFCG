@@ -440,6 +440,8 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
     LoadTextureImage("../../data/rocket_tower.jpg");                 // TextureImage2
+    LoadTextureImage("../../data/farm.jpg");                         // TextureImage3
+    LoadTextureImage("../../data/cannon_tower.jpg");                 // TextureImage4
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -457,6 +459,14 @@ int main(int argc, char* argv[])
     ObjModel rocketmodel("../../data/rocket_tower.obj");
     ComputeNormals(&rocketmodel);
     BuildTrianglesAndAddToVirtualScene(&rocketmodel);
+
+    ObjModel farmmodel("../../data/farm.obj");
+    ComputeNormals(&farmmodel);
+    BuildTrianglesAndAddToVirtualScene(&farmmodel);
+
+    ObjModel cannonmodel("../../data/cannon_tower.obj");
+    ComputeNormals(&cannonmodel);
+    BuildTrianglesAndAddToVirtualScene(&cannonmodel);
 
 
     if ( argc > 1 )
@@ -577,6 +587,9 @@ int main(int argc, char* argv[])
         #define BUNNY  1
         #define PLANE  2
         #define ROCKET 3
+        #define FARM 4
+        #define CANNON 5
+
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
@@ -599,11 +612,23 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
 
-        // Desenhamos o AmongUS
+        // Desenhamos a Torre de foguete
         model = Matrix_Translate(2.0f,0.0f,0.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, ROCKET);
         DrawVirtualObject("the_rocket_tower");
+
+        // Desenhamos a Torre da Fazenda
+        model = Matrix_Translate(4.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, FARM);
+        DrawVirtualObject("the_farm");
+
+        // Desenhamos a Torre de Canhão
+        model = Matrix_Translate(6.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, CANNON);
+        DrawVirtualObject("the_cannon_tower");
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -772,6 +797,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
     glUseProgram(0);
 }
 
