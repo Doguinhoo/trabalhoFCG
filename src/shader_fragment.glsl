@@ -25,7 +25,7 @@ uniform mat4 projection;
 #define ROCKET_TOWER 3
 #define FARM 4
 #define CANNON_TOWER 5
-
+#define MORTAR_TOWER 6
 
 uniform int object_id;
 
@@ -39,7 +39,7 @@ uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
 uniform sampler2D TextureImage4;
-
+uniform sampler2D TextureImage5;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -127,7 +127,7 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER)
+    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -160,6 +160,12 @@ void main()
     {
 
         vec3 kd_rocket = texture(TextureImage4, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else if ( object_id == MORTAR_TOWER )
+    {
+
+        vec3 kd_rocket = texture(TextureImage5, vec2(U,V)).rgb;
         color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
     }
     else // objetos (BUNNY, PLANE)

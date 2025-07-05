@@ -442,6 +442,8 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/rocket_tower.jpg");                 // TextureImage2
     LoadTextureImage("../../data/farm.jpg");                         // TextureImage3
     LoadTextureImage("../../data/cannon_tower.jpg");                 // TextureImage4
+    LoadTextureImage("../../data/mortar_tower.jpg");                 // TextureImage5
+
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -468,6 +470,9 @@ int main(int argc, char* argv[])
     ComputeNormals(&cannonmodel);
     BuildTrianglesAndAddToVirtualScene(&cannonmodel);
 
+    ObjModel mortarmodel("../../data/mortar_tower.obj");
+    ComputeNormals(&mortarmodel);
+    BuildTrianglesAndAddToVirtualScene(&mortarmodel);
 
     if ( argc > 1 )
     {
@@ -589,6 +594,8 @@ int main(int argc, char* argv[])
         #define ROCKET 3
         #define FARM 4
         #define CANNON 5
+        #define MORTAR 6
+
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
@@ -629,6 +636,13 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, CANNON);
         DrawVirtualObject("the_cannon_tower");
+
+        // Desenhamos a Torre de Morteiro
+        model = Matrix_Translate(8.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, MORTAR);
+        DrawVirtualObject("the_mortar_tower");
+
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
@@ -798,6 +812,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
     glUseProgram(0);
 }
 
