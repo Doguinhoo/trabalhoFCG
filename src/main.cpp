@@ -48,6 +48,9 @@
 void PushMatrix(glm::mat4 M);
 void PopMatrix(glm::mat4& M);
 
+void LoadContext();
+void UnloadContext();
+
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -96,17 +99,15 @@ bool g_UsePerspectiveProjection = true;
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
-// Variáveis que definem um programa de GPU (shaders). Veja função CreateGpuProgramFromFiles().
-// GLuint g_GpuProgramID = 0;
-// GLint g_model_uniform;
-// GLint g_view_uniform;
-// GLint g_projection_uniform;
-// GLint g_object_id_uniform;
-// GLint g_bbox_min_uniform;
-// GLint g_bbox_max_uniform;
+GLuint g_vertex_shader_id;
 
-// Número de texturas carregadas pela função LoadTextureImage()
-GLuint g_NumLoadedTextures = 0;
+GLuint g_sphere_fragment_shader_id;
+GLuint g_bunny_fragment_shader_id;
+GLuint g_plane_fragment_shader_id;
+
+GLuint g_sphere_gpuProgram;
+GLuint g_bunny_gpuProgram;
+GLuint g_plane_gpuProgram;
 
 int main(int argc, char* argv[]) {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -171,35 +172,9 @@ int main(int argc, char* argv[]) {
     const GLubyte *glversion   = glGetString(GL_VERSION);
     const GLubyte *glslversion = glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion);
+    printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion); 
 
-    // Carregamos os shaders de vértices e de fragmentos que serão utilizados
-    // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    
-    // g_GpuProgramID = CreateGpuProgramFromFiles("../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
-
-    // Buscamos o endereço das variáveis definidas dentro do Vertex Shader.
-    // Utilizaremos estas variáveis para enviar dados para a placa de vídeo
-    // (GPU)! Veja arquivo "shader_vertex.glsl" e "shader_fragment.glsl".
-    // g_model_uniform      = glGetUniformLocation(g_GpuProgramID, "model"); // Variável da matriz "model"
-    // g_view_uniform       = glGetUniformLocation(g_GpuProgramID, "view"); // Variável da matriz "view" em shader_vertex.glsl
-    // g_projection_uniform = glGetUniformLocation(g_GpuProgramID, "projection"); // Variável da matriz "projection" em shader_vertex.glsl
-    // g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
-    // TODO bbox
-    // g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
-    // g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
-
-    // TODO ver onde colocar isso
-    // // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
-    // glUseProgram(g_GpuProgramID);
-    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
-    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
-    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
-    // glUseProgram(0);
-
-    // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);      // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif", 1); // TextureImage1
+    LoadContext();
 
     GLint textureImagesArray[] = {0, 1};
     std::vector<GLint> textureImages(textureImagesArray, textureImagesArray + 2);
@@ -207,17 +182,17 @@ int main(int argc, char* argv[]) {
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
     Shape sphereShape(sphereModel, "the_sphere");
-    SceneObject sphereObject(sphereShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl", textureImages);
+    SceneObject sphereObject(sphereShape, g_sphere_gpuProgram, textureImages);
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
     Shape bunnyShape(bunnyModel, "the_bunny");
-    SceneObject bunnyObject(bunnyShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl", textureImages);
+    SceneObject bunnyObject(bunnyShape, g_bunny_gpuProgram, textureImages);
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
     Shape planeShape(planeModel, "the_plane");
-    SceneObject planeObject(planeShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl", textureImages);
+    SceneObject planeObject(planeShape, g_plane_gpuProgram, textureImages);
 
     ObjModel *extraModel;
     Shape *extraShape;
@@ -387,6 +362,34 @@ void PopMatrix(glm::mat4& M) {
     }
 }
 
+void LoadContext() {
+    // Carregamos os shaders de vértices e de fragmentos que serão utilizados
+    // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
+    g_vertex_shader_id = LoadShader_Vertex("../../src/vertex_shader.glsl");
+    g_sphere_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_sphere.glsl");
+    g_bunny_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_bunny.glsl");
+    g_plane_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_plane.glsl");
+
+    g_sphere_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_sphere_fragment_shader_id);
+    g_bunny_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_bunny_fragment_shader_id);
+    g_plane_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_plane_fragment_shader_id);
+
+    // Carregamos duas imagens para serem utilizadas como textura
+    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);
+    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif", 1);
+}
+
+void UnloadContext() {
+    glDeleteShader(g_vertex_shader_id);
+    glDeleteShader(g_sphere_fragment_shader_id);
+    glDeleteShader(g_bunny_fragment_shader_id);
+    glDeleteShader(g_plane_fragment_shader_id);
+
+    glDeleteProgram(g_sphere_gpuProgram);
+    glDeleteProgram(g_bunny_gpuProgram);
+    glDeleteProgram(g_plane_gpuProgram);
+}
+
 // Definição da função que será chamada sempre que a janela do sistema
 // operacional for redimensionada, por consequência alterando o tamanho do
 // "framebuffer" (região de memória onde são armazenados os pixels da imagem).
@@ -539,50 +542,46 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     float delta = 3.141592 / 16; // 22.5 graus, em radianos.
 
-    if (key == GLFW_KEY_X && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_X && action == GLFW_PRESS) {
         g_AngleX += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
 
-    if (key == GLFW_KEY_Y && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_Y && action == GLFW_PRESS) {
         g_AngleY += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
-    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-    {
+
+    if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
 
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         g_AngleX = 0.0f;
         g_AngleY = 0.0f;
         g_AngleZ = 0.0f;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_P && action == GLFW_PRESS) {
         g_UsePerspectiveProjection = true;
     }
 
     // Se o usuário apertar a tecla O, utilizamos projeção ortográfica.
-    if (key == GLFW_KEY_O && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_O && action == GLFW_PRESS) {
         g_UsePerspectiveProjection = false;
     }
 
     // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
-    if (key == GLFW_KEY_H && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_H && action == GLFW_PRESS) {
         g_ShowInfoText = !g_ShowInfoText;
     }
 
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
-    if (key == GLFW_KEY_R && action == GLFW_PRESS)
-    {
-        CreateGpuProgramFromFiles("../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        UnloadContext();
+        
+        LoadContext();
+
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
     }

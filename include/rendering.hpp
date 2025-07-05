@@ -49,6 +49,8 @@ class SceneObject {
 
     public:
         SceneObject(Shape& shapeObject, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages);
+        SceneObject(Shape& shapeObject, GLuint vertex_shader_id, GLuint fragment_shader_id, std::vector<GLint> textureImages);
+        SceneObject(Shape& shapeObject, GLuint gpuProgram, std::vector<GLint> textureImages);
         void draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
 };
 
@@ -58,5 +60,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // 
 GLuint CreateGpuProgramFromFiles(const char *vertex_shader_file_name, const char *fragment_shader_file_name); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename, GLuint number);
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
+GLuint LoadShader_Vertex(const char* filename);
+GLuint LoadShader_Fragment(const char* filename);
 
 #endif // RENDERING_HPP
