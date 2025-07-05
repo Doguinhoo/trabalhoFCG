@@ -31,6 +31,7 @@ class SceneObject {
 
     public:
         SceneObject(ObjModel&, const char *shape_name);
+        void draw();
 };
 
 typedef std::map<std::string, SceneObject> VirtualScene;
@@ -39,13 +40,5 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // 
 GLuint CreateGpuProgramFromFiles(const char *vertex_shader_file_name, const char *fragment_shader_file_name); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename, int number);
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
-void BuildTrianglesAndAddToVirtualScene(ObjModel*, VirtualScene&); // Constrói representação de um ObjModel como malha de triângulos para renderização
-void DrawVirtualObject(const char* object_name, VirtualScene); // Desenha um objeto armazenado em g_VirtualScene
-
-// void LoadTextureImage(const char* filename); // Função que carrega imagens de textura
-// GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
-// GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
-// void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
-// void PrintObjModelInfo(ObjModel*); // Função para debugging
 
 #endif // RENDERING_HPP

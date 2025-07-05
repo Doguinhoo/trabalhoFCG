@@ -209,21 +209,21 @@ int main(int argc, char* argv[]) {
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif", 1); // TextureImage1
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel spheremodel("../../data/sphere.obj");
-    ComputeNormals(&spheremodel);
-    BuildTrianglesAndAddToVirtualScene(&spheremodel, g_VirtualScene);
+    ObjModel sphereModel("../../data/sphere.obj");
+    ComputeNormals(&sphereModel);
+    SceneObject sphereObject(sphereModel, "the_sphere");
 
-    ObjModel bunnymodel("../../data/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel, g_VirtualScene);
+    ObjModel bunnyModel("../../data/bunny.obj");
+    ComputeNormals(&bunnyModel);
+    SceneObject bunnyObject(bunnyModel, "the_bunny");
 
-    ObjModel planemodel("../../data/plane.obj");
-    ComputeNormals(&planemodel);
-    BuildTrianglesAndAddToVirtualScene(&planemodel, g_VirtualScene);
+    ObjModel planeModel("../../data/plane.obj");
+    ComputeNormals(&planeModel);
+    SceneObject planeObject(planeModel, "the_plane");
 
-    if ( argc > 1 ) {
-        ObjModel model(argv[1]);
-        BuildTrianglesAndAddToVirtualScene(&model, g_VirtualScene);
+    if ( argc >= 3 ) {
+        ObjModel extraModel(argv[1]);
+        SceneObject extraObject(extraModel, argv[2]);
     }
 
     // Inicializamos o código para renderização de texto.
@@ -322,20 +322,20 @@ int main(int argc, char* argv[]) {
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere", g_VirtualScene);
+        sphereObject.draw();
 
         // Desenhamos o modelo do coelho
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, BUNNY);
-        DrawVirtualObject("the_bunny", g_VirtualScene);
+        bunnyObject.draw();
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
-        DrawVirtualObject("the_plane", g_VirtualScene);
+        planeObject.draw();
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do

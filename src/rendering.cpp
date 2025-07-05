@@ -343,6 +343,37 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name) {
     glBindVertexArray(0);
 } */
 
+void SceneObject::draw() {
+// "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
+    // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
+    // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
+    glBindVertexArray(this->vertex_array_object_id);
+
+    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
+    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
+    glm::vec3 bbox_min = this->bbox_min;
+    glm::vec3 bbox_max = this->bbox_max;
+    // TODO dar um jeito nisso
+    // glUniform4f(g_bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
+    // glUniform4f(g_bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+
+    // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
+    // apontados pelo VAO como linhas. Veja a definição de
+    // g_VirtualScene[""] dentro da função BuildTrianglesAndAddToVirtualScene(), e veja
+    // a documentação da função glDrawElements() em
+    // http://docs.gl/gl3/glDrawElements.
+    glDrawElements(
+        this->rendering_mode,
+        this->num_indices,
+        GL_UNSIGNED_INT,
+        (void*)(this->first_index * sizeof(GLuint))
+    );
+
+    // "Desligamos" o VAO, evitando assim que operações posteriores venham a
+    // alterar o mesmo. Isso evita bugs.
+    glBindVertexArray(0);
+}
+
 // Função que computa as normais de um ObjModel, caso elas não tenham sido
 // especificadas dentro do arquivo ".obj"
 void ComputeNormals(ObjModel* model) {
@@ -624,36 +655,36 @@ void LoadTextureImage(const char* filename, int number) {
 
 // Função que desenha um objeto armazenado em g_VirtualScene. Veja definição
 // dos objetos na função BuildTrianglesAndAddToVirtualScene().
-void DrawVirtualObject(const char* object_name, VirtualScene virtualScene) {
-    // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
-    // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
-    // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
-    glBindVertexArray(virtualScene[object_name].vertex_array_object_id);
+// void DrawVirtualObject(const char* object_name, VirtualScene virtualScene) {
+//     // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
+//     // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
+//     // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
+//     glBindVertexArray(virtualScene[object_name].vertex_array_object_id);
 
-    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
-    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
-    glm::vec3 bbox_min = virtualScene[object_name].bbox_min;
-    glm::vec3 bbox_max = virtualScene[object_name].bbox_max;
-    // TODO dar um jeito nisso
-    // glUniform4f(g_bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
-    // glUniform4f(g_bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+//     // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
+//     // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
+//     glm::vec3 bbox_min = virtualScene[object_name].bbox_min;
+//     glm::vec3 bbox_max = virtualScene[object_name].bbox_max;
+//     // TODO dar um jeito nisso
+//     // glUniform4f(g_bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
+//     // glUniform4f(g_bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
 
-    // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
-    // apontados pelo VAO como linhas. Veja a definição de
-    // g_VirtualScene[""] dentro da função BuildTrianglesAndAddToVirtualScene(), e veja
-    // a documentação da função glDrawElements() em
-    // http://docs.gl/gl3/glDrawElements.
-    glDrawElements(
-        virtualScene[object_name].rendering_mode,
-        virtualScene[object_name].num_indices,
-        GL_UNSIGNED_INT,
-        (void*)(virtualScene[object_name].first_index * sizeof(GLuint))
-    );
+//     // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
+//     // apontados pelo VAO como linhas. Veja a definição de
+//     // g_VirtualScene[""] dentro da função BuildTrianglesAndAddToVirtualScene(), e veja
+//     // a documentação da função glDrawElements() em
+//     // http://docs.gl/gl3/glDrawElements.
+//     glDrawElements(
+//         virtualScene[object_name].rendering_mode,
+//         virtualScene[object_name].num_indices,
+//         GL_UNSIGNED_INT,
+//         (void*)(virtualScene[object_name].first_index * sizeof(GLuint))
+//     );
 
-    // "Desligamos" o VAO, evitando assim que operações posteriores venham a
-    // alterar o mesmo. Isso evita bugs.
-    glBindVertexArray(0);
-}
+//     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
+//     // alterar o mesmo. Isso evita bugs.
+//     glBindVertexArray(0);
+// }
 
 // Função auxilar, utilizada pelas duas funções acima. Carrega código de GPU de
 // um arquivo GLSL e faz sua compilação.
