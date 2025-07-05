@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <tiny_obj_loader.h>
 #include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <vector>
 
@@ -20,7 +21,8 @@ struct ObjModel {
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 class SceneObject {
-    std::string  name;        // Nome do objeto
+    std::string  name;        // Nome do objeto (cova esteve aqui)
+    GLuint       gpuProgram; // Programa de GPU usado para renderizar o objeto
     size_t       first_index; // Índice do primeiro vértice dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
     GLuint       GpuProgram; // Programa de gpu usado pra renderizar o objeto
     size_t       num_indices; // Número de índices do objeto dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
@@ -30,8 +32,8 @@ class SceneObject {
     glm::vec3    bbox_max;
 
     public:
-        SceneObject(ObjModel&, const char *shape_name);
-        void draw();
+        SceneObject(ObjModel&, const char *, const char *, const char *);
+        void draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
 };
 
 typedef std::map<std::string, SceneObject> VirtualScene;

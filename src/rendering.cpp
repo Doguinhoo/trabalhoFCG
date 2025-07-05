@@ -1,6 +1,8 @@
 #include "rendering.hpp"
 
 #include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Headers da biblioteca para carregar modelos obj
 #include <tiny_obj_loader.h>
@@ -59,7 +61,7 @@ ObjModel::ObjModel(const char* filename, const char* basepath/*  = NULL */, bool
     printf("OK.\n");
 }
 
-SceneObject::SceneObject(ObjModel &model, const char *shape_name) {
+SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *vertex_shader_file_name, const char *fragment_shader_file_name) {
     GLuint vertex_array_object_id;
     glGenVertexArrays(1, &vertex_array_object_id);
     glBindVertexArray(vertex_array_object_id);
@@ -198,6 +200,8 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name) {
     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
     // alterar o mesmo. Isso evita bugs.
     glBindVertexArray(0);
+
+    this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
 }
 
 // Constrói triângulos para futura renderização a partir de um ObjModel.
@@ -343,17 +347,26 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name) {
     glBindVertexArray(0);
 } */
 
-void SceneObject::draw() {
-// "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
+void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
+    GLuint model_uniform      = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
+    GLuint view_uniform       = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
+    GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
+
+    glUseProgram(this->gpuProgram);
+
+    // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
     // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
     // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
     glBindVertexArray(this->vertex_array_object_id);
+    glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
+    // TODO dar um jeito nisso
     // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
     // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
-    glm::vec3 bbox_min = this->bbox_min;
-    glm::vec3 bbox_max = this->bbox_max;
-    // TODO dar um jeito nisso
+    // glm::vec3 bbox_min = this->bbox_min;
+    // glm::vec3 bbox_max = this->bbox_max;
     // glUniform4f(g_bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
     // glUniform4f(g_bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
 
@@ -372,6 +385,7 @@ void SceneObject::draw() {
     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
     // alterar o mesmo. Isso evita bugs.
     glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 // Função que computa as normais de um ObjModel, caso elas não tenham sido

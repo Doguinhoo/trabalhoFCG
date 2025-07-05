@@ -90,14 +90,6 @@ float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
 float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 
-// Variáveis que controlam rotação do antebraço
-float g_ForearmAngleZ = 0.0f;
-float g_ForearmAngleX = 0.0f;
-
-// Variáveis que controlam translação do torso
-float g_TorsoPositionX = 0.0f;
-float g_TorsoPositionY = 0.0f;
-
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
@@ -105,13 +97,13 @@ bool g_UsePerspectiveProjection = true;
 bool g_ShowInfoText = true;
 
 // Variáveis que definem um programa de GPU (shaders). Veja função CreateGpuProgramFromFiles().
-GLuint g_GpuProgramID = 0;
-GLint g_model_uniform;
-GLint g_view_uniform;
-GLint g_projection_uniform;
-GLint g_object_id_uniform;
-GLint g_bbox_min_uniform;
-GLint g_bbox_max_uniform;
+// GLuint g_GpuProgramID = 0;
+// GLint g_model_uniform;
+// GLint g_view_uniform;
+// GLint g_projection_uniform;
+// GLint g_object_id_uniform;
+// GLint g_bbox_min_uniform;
+// GLint g_bbox_max_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -183,26 +175,27 @@ int main(int argc, char* argv[]) {
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    //
-    g_GpuProgramID = CreateGpuProgramFromFiles("../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
+    
+    // g_GpuProgramID = CreateGpuProgramFromFiles("../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
 
     // Buscamos o endereço das variáveis definidas dentro do Vertex Shader.
     // Utilizaremos estas variáveis para enviar dados para a placa de vídeo
     // (GPU)! Veja arquivo "shader_vertex.glsl" e "shader_fragment.glsl".
-    g_model_uniform      = glGetUniformLocation(g_GpuProgramID, "model"); // Variável da matriz "model"
-    g_view_uniform       = glGetUniformLocation(g_GpuProgramID, "view"); // Variável da matriz "view" em shader_vertex.glsl
-    g_projection_uniform = glGetUniformLocation(g_GpuProgramID, "projection"); // Variável da matriz "projection" em shader_vertex.glsl
-    g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
-    g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
-    g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
+    // g_model_uniform      = glGetUniformLocation(g_GpuProgramID, "model"); // Variável da matriz "model"
+    // g_view_uniform       = glGetUniformLocation(g_GpuProgramID, "view"); // Variável da matriz "view" em shader_vertex.glsl
+    // g_projection_uniform = glGetUniformLocation(g_GpuProgramID, "projection"); // Variável da matriz "projection" em shader_vertex.glsl
+    // g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
+    // TODO bbox
+    // g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
+    // g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
 
     // TODO ver onde colocar isso
     // // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
-    glUseProgram(g_GpuProgramID);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
-    glUseProgram(0);
+    // glUseProgram(g_GpuProgramID);
+    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
+    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
+    // glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+    // glUseProgram(0);
 
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);      // TextureImage0
@@ -211,19 +204,19 @@ int main(int argc, char* argv[]) {
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
-    SceneObject sphereObject(sphereModel, "the_sphere");
+    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
-    SceneObject bunnyObject(bunnyModel, "the_bunny");
+    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
-    SceneObject planeObject(planeModel, "the_plane");
+    SceneObject planeObject(planeModel, "the_plane", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
 
-    if ( argc >= 3 ) {
+    if (argc >= 5) {
         ObjModel extraModel(argv[1]);
-        SceneObject extraObject(extraModel, argv[2]);
+        SceneObject extraObject(extraModel, argv[2], argv[3], argv[4]);
     }
 
     // Inicializamos o código para renderização de texto.
@@ -255,7 +248,7 @@ int main(int argc, char* argv[]) {
 
         // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
         // os shaders de vértice e fragmentos).
-        glUseProgram(g_GpuProgramID);
+        // glUseProgram(g_GpuProgramID);
 
         // Computamos a posição da câmera utilizando coordenadas esféricas.  As
         // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
@@ -308,34 +301,28 @@ int main(int argc, char* argv[]) {
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
         // efetivamente aplicadas em todos os pontos.
-        glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
-        glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
+        // glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
+        // glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define SPHERE 0
-        #define BUNNY  1
-        #define PLANE  2
+        // #define SPHERE 0
+        // #define BUNNY  1
+        // #define PLANE  2
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f, 0.0f, 0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        sphereObject.draw();
+        sphereObject.draw(model, view, projection);
 
         // Desenhamos o modelo do coelho
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, BUNNY);
-        bunnyObject.draw();
+        bunnyObject.draw(model, view, projection);
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, PLANE);
-        planeObject.draw();
+        planeObject.draw(model, view, projection);
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -417,8 +404,7 @@ double g_LastCursorPosX, g_LastCursorPosY;
 
 // Função callback chamada sempre que o usuário aperta algum dos botões do mouse
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-    {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
         // posição atual do cursor nas variáveis g_LastCursorPosX e
         // g_LastCursorPosY.  Também, setamos a variável
@@ -427,14 +413,14 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
     }
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    {
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
         // variável abaixo para false.
         g_LeftMouseButtonPressed = false;
     }
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-    {
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
         // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
         // posição atual do cursor nas variáveis g_LastCursorPosX e
         // g_LastCursorPosY.  Também, setamos a variável
@@ -443,14 +429,14 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_RightMouseButtonPressed = true;
     }
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
-    {
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
         // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
         // variável abaixo para false.
         g_RightMouseButtonPressed = false;
     }
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
-    {
+
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
         // Se o usuário pressionou o botão esquerdo do mouse, guardamos a
         // posição atual do cursor nas variáveis g_LastCursorPosX e
         // g_LastCursorPosY.  Também, setamos a variável
@@ -459,8 +445,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_MiddleMouseButtonPressed = true;
     }
-    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
-    {
+
+    if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE) {
         // Quando o usuário soltar o botão esquerdo do mouse, atualizamos a
         // variável abaixo para false.
         g_MiddleMouseButtonPressed = false;
@@ -476,8 +462,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     // parâmetros que definem a posição da câmera dentro da cena virtual.
     // Assim, temos que o usuário consegue controlar a câmera.
 
-    if (g_LeftMouseButtonPressed)
-    {
+    if (g_LeftMouseButtonPressed) {
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
@@ -495,38 +480,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
-    }
-
-    if (g_RightMouseButtonPressed)
-    {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
-        g_ForearmAngleZ -= 0.01f*dx;
-        g_ForearmAngleX += 0.01f*dy;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
-    }
-
-    if (g_MiddleMouseButtonPressed)
-    {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
-        g_TorsoPositionX += 0.01f*dx;
-        g_TorsoPositionY -= 0.01f*dy;
     
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
@@ -596,10 +549,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_AngleX = 0.0f;
         g_AngleY = 0.0f;
         g_AngleZ = 0.0f;
-        g_ForearmAngleX = 0.0f;
-        g_ForearmAngleZ = 0.0f;
-        g_TorsoPositionX = 0.0f;
-        g_TorsoPositionY = 0.0f;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
