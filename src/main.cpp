@@ -292,7 +292,7 @@ void SetupGame()
 {
     printf("Configurando o jogo...\n");
 
-    // --- 1. DEFINIR O CAMINHO DOS INIMIGOS ---
+    // --- cminho dos inimigos é uma curva bezier ---
     std::vector<glm::vec4> controlPoints = {
         {-20.0f, -1.0f, 0.0f, 1.0f}, {-5.0f, -1.0f, 15.0f, 1.0f},
         {5.0f,  -1.0f, -15.0f, 1.0f}, {20.0f, -1.0f, 0.0f, 1.0f}
@@ -300,10 +300,7 @@ void SetupGame()
     g_enemyPath = std::shared_ptr<Path>(new Path(controlPoints));
     g_enemyPath->precompute();
 
-    // --- 2. DEFINIR OS BLUEPRINTS DAS TORRES E REGISTRAR NA LOJA ---
-    printf("Registrando torres na loja...\n");
-
-    // --- Torre de Canhão (com upgrade) ---
+    // --- Torre de Canhão ---
     TowerBlueprint cannonV1_bp;
     cannonV1_bp.name = "CannonTower_V1";
     cannonV1_bp.modelName = "the_cannon_tower";
@@ -312,13 +309,10 @@ void SetupGame()
     cannonV1_bp.cooldown = 0.8f;
     cannonV1_bp.targetingFactory = makeFirst;
     cannonV1_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 0)); };
-    cannonV1_bp.passiveFactory = nullptr; // <-- ADICIONADO PARA CLAREZA E SEGURANÇA
+    cannonV1_bp.passiveFactory = nullptr;
     cannonV1_bp.upgradeCost = 150;
     cannonV1_bp.nextUpgradeName = "CannonTower_V2";
     g_shop.registerTower(cannonV1_bp);
-
-    printf("[SetupGame] Blueprint 'CannonTower_V1' registrado. Targeting eh valido? %d, Shooting eh valido? %d\n",
-       (bool)cannonV1_bp.targetingFactory, (bool)cannonV1_bp.shootingFactory);
 
     TowerBlueprint cannonV2_bp;
     cannonV2_bp.name = "CannonTower_V2";
@@ -328,7 +322,7 @@ void SetupGame()
     cannonV2_bp.cooldown = 0.6f;
     cannonV2_bp.targetingFactory = makeFirst;
     cannonV2_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(45, 0)); };
-    cannonV2_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    cannonV2_bp.passiveFactory = nullptr; 
     g_shop.registerTower(cannonV2_bp);
 
     // --- Torre de Foguete ---
@@ -340,7 +334,7 @@ void SetupGame()
     rocket_bp.cooldown = 3.0f;
     rocket_bp.targetingFactory = makeStrongest;
     rocket_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
-    rocket_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    rocket_bp.passiveFactory = nullptr; 
     g_shop.registerTower(rocket_bp);
     
     // --- Torre de Morteiro ---
@@ -352,7 +346,7 @@ void SetupGame()
     mortar_bp.cooldown = 5.0f;
     mortar_bp.targetingFactory = makeNearest;
     mortar_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
-    mortar_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    mortar_bp.passiveFactory = nullptr; 
     g_shop.registerTower(mortar_bp);
 
     // --- Farm de Dinheiro ---
@@ -362,8 +356,8 @@ void SetupGame()
     farm_bp.cost = 125;
     farm_bp.range = 0.0f;
     farm_bp.cooldown = 0.0f;
-    farm_bp.targetingFactory = nullptr; // <-- ADICIONADO
-    farm_bp.shootingFactory = nullptr;  // <-- ADICIONADO
+    farm_bp.targetingFactory = nullptr;
+    farm_bp.shootingFactory = nullptr;  
     farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
     g_shop.registerTower(farm_bp);
 
@@ -779,13 +773,15 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, MORTAR);
         DrawVirtualObject("the_mortar_tower");
+
+        // Loop que desenha torre ao comprar
         for (const auto& tower : g_towers)
         {
-            // 1. Pega a posição da torre
+            // Pega a posição da torre
             model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z);
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
-            // 2. Define o ID para o shader saber como colorir/texturizar
+            // Define o ID para o shader saber como colorir/texturizar
             if (tower->blueprintName.find("CannonTower_V1") != std::string::npos) {
                 glUniform1i(g_object_id_uniform, CANNON);
             } else if (tower->blueprintName == "Farm") {
@@ -794,25 +790,18 @@ int main(int argc, char* argv[])
                 glUniform1i(g_object_id_uniform, ROCKET);
             } 
 
-            // 3. Desenha o modelo 3D que a própria torre diz para desenhar!
+            // Desenha o modelo
             DrawVirtualObject(tower->modelName.c_str());
         }
 
+        // Mostrar dinheiro e round na tela
         char text_buffer[100];
-
-        // Formata a string "Dinheiro: [valor]" e a coloca no buffer.
-        // %.0f formata o número float (g_playerMoney) sem casas decimais.
         snprintf(text_buffer, sizeof(text_buffer), "Dinheiro: %.0f", g_playerMoney);
-
-        // Chama a função para desenhar o texto na tela
-        // Posição x=-0.95 (canto esquerdo) e y=0.95 (topo)
         TextRendering_PrintString(window, text_buffer, -0.95f, 0.95f, 1.0f);
-
-        // Você pode adicionar outras informações da mesma forma
         snprintf(text_buffer, sizeof(text_buffer), "Round: %d / %d", g_currentRound, g_totalRounds);
         TextRendering_PrintString(window, text_buffer, -0.95f, 0.90f, 1.0f);
-        // Imprimimos na tela os ângulos de Euler que controlam a rotação do
-        // terceiro cubo.
+
+
         TextRendering_ShowEulerAngles(window);
 
         // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
