@@ -9,6 +9,7 @@
 
 struct TowerBlueprint {
     std::string name;
+    std::string modelName;
     float       cost;
     float       range;
     float       cooldown;

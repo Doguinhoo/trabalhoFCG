@@ -256,12 +256,14 @@ Shop g_shop;
 std::vector<std::unique_ptr<Tower>> g_towers;
 float g_playerMoney = 1000.0f;
 std::shared_ptr<Path> g_enemyPath;
-
-// --- NOVAS VARIÁVEIS DE ROUND ---
+double g_cursor_x = 0.0;
+double g_cursor_y = 0.0;
 int   g_currentRound = 0;
 const int g_totalRounds = 20;
 bool  g_isRoundActive = false; // Controla se inimigos estão vindo
 float g_intermissionTimer = 5.0f; // Tempo de pausa entre os rounds (5s)
+glm::mat4 g_view_matrix;
+glm::mat4 g_projection_matrix;
 
 // Movimento “dummy” que não faz nada
 struct DummyMovement : IMovement {
@@ -272,9 +274,100 @@ struct DummyMovement : IMovement {
 static std::unique_ptr<ITargeting> makeNearest() {
     return std::unique_ptr<NearestTarget>(new NearestTarget());
 }
+
 // Fábrica de shooting sem dano
 static std::unique_ptr<IShooting> makeDummyShot() {
     return std::unique_ptr<ProjectileShot>(new ProjectileShot(0.0f, 0.0f));
+}
+
+static std::unique_ptr<ITargeting> makeFirst() { 
+    return std::unique_ptr<FirstTarget>(new FirstTarget()); 
+}
+
+static std::unique_ptr<ITargeting> makeStrongest() { 
+    return std::unique_ptr<StrongestTarget>(new StrongestTarget()); 
+}
+
+void SetupGame()
+{
+    printf("Configurando o jogo...\n");
+
+    // --- 1. DEFINIR O CAMINHO DOS INIMIGOS ---
+    std::vector<glm::vec4> controlPoints = {
+        {-20.0f, -1.0f, 0.0f, 1.0f}, {-5.0f, -1.0f, 15.0f, 1.0f},
+        {5.0f,  -1.0f, -15.0f, 1.0f}, {20.0f, -1.0f, 0.0f, 1.0f}
+    };
+    g_enemyPath = std::shared_ptr<Path>(new Path(controlPoints));
+    g_enemyPath->precompute();
+
+    // --- 2. DEFINIR OS BLUEPRINTS DAS TORRES E REGISTRAR NA LOJA ---
+    printf("Registrando torres na loja...\n");
+
+    // --- Torre de Canhão (com upgrade) ---
+    TowerBlueprint cannonV1_bp;
+    cannonV1_bp.name = "CannonTower_V1";
+    cannonV1_bp.modelName = "the_cannon_tower";
+    cannonV1_bp.cost = 100;
+    cannonV1_bp.range = 8.0f;
+    cannonV1_bp.cooldown = 0.8f;
+    cannonV1_bp.targetingFactory = makeFirst;
+    cannonV1_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 0)); };
+    cannonV1_bp.passiveFactory = nullptr; // <-- ADICIONADO PARA CLAREZA E SEGURANÇA
+    cannonV1_bp.upgradeCost = 150;
+    cannonV1_bp.nextUpgradeName = "CannonTower_V2";
+    g_shop.registerTower(cannonV1_bp);
+
+    printf("[SetupGame] Blueprint 'CannonTower_V1' registrado. Targeting eh valido? %d, Shooting eh valido? %d\n",
+       (bool)cannonV1_bp.targetingFactory, (bool)cannonV1_bp.shootingFactory);
+
+    TowerBlueprint cannonV2_bp;
+    cannonV2_bp.name = "CannonTower_V2";
+    cannonV2_bp.modelName = "the_cannon_tower";
+    cannonV2_bp.cost = 0;
+    cannonV2_bp.range = 9.5f;
+    cannonV2_bp.cooldown = 0.6f;
+    cannonV2_bp.targetingFactory = makeFirst;
+    cannonV2_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(45, 0)); };
+    cannonV2_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    g_shop.registerTower(cannonV2_bp);
+
+    // --- Torre de Foguete ---
+    TowerBlueprint rocket_bp;
+    rocket_bp.name = "RocketTower";
+    rocket_bp.modelName = "the_rocket_tower";
+    rocket_bp.cost = 175;
+    rocket_bp.range = 12.0f;
+    rocket_bp.cooldown = 3.0f;
+    rocket_bp.targetingFactory = makeStrongest;
+    rocket_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
+    rocket_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    g_shop.registerTower(rocket_bp);
+    
+    // --- Torre de Morteiro ---
+    TowerBlueprint mortar_bp;
+    mortar_bp.name = "MortarTower";
+    mortar_bp.modelName = "the_mortar_tower";
+    mortar_bp.cost = 250;
+    mortar_bp.range = 18.0f;
+    mortar_bp.cooldown = 5.0f;
+    mortar_bp.targetingFactory = makeNearest;
+    mortar_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
+    mortar_bp.passiveFactory = nullptr; // <-- ADICIONADO
+    g_shop.registerTower(mortar_bp);
+
+    // --- Farm de Dinheiro ---
+    TowerBlueprint farm_bp;
+    farm_bp.name = "Farm";
+    farm_bp.modelName = "the_farm";
+    farm_bp.cost = 125;
+    farm_bp.range = 0.0f;
+    farm_bp.cooldown = 0.0f;
+    farm_bp.targetingFactory = nullptr; // <-- ADICIONADO
+    farm_bp.shootingFactory = nullptr;  // <-- ADICIONADO
+    farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
+    g_shop.registerTower(farm_bp);
+
+    printf("Setup do jogo concluído!\n");
 }
 
 void teste()
@@ -362,6 +455,43 @@ void teste()
     assert(final_cannon->range == 9.0f);
 
     printf("\n--- TESTE DE ECONOMIA E UPGRADES CONCLUÍDO COM SUCESSO! ---\n\n");
+}
+
+// Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
+glm::vec3 GetCursorWorldPosition(GLFWwindow* window)
+{
+    // Obtém o tamanho da janela
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Converte as coordenadas do cursor (pixels) para Coordenadas Normalizadas de Dispositivo (NDC) [-1, 1]
+    float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
+    float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height; // Y é invertido
+
+    // Define um raio em espaço de recorte (Clip Space)
+    glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
+
+    // Converte o raio do espaço de recorte para o espaço da câmera (Eye Space)
+    glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
+    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0); // Direção para frente
+
+    // Converte o raio do espaço da câmera para o espaço do mundo (World Space)
+    glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
+
+    // Calcula a interseção do raio com o plano do chão (y = -1.0)
+    // Posição da câmera (origem do raio)
+    glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
+    
+    // Se o raio não estiver apontando para baixo, não haverá interseção
+    if (ray_world_dir.y >= 0.0f) {
+        return glm::vec3(0.0f, -999.0f, 0.0f); // Retorna uma posição inválida
+    }
+    
+    // Calcula a distância 't' até a interseção
+    float t = (-1.0f - ray_origin.y) / ray_world_dir.y;
+
+    // Retorna o ponto de interseção
+    return ray_origin + t * ray_world_dir;
 }
 
 int main(int argc, char* argv[])
@@ -491,6 +621,9 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    //
+    SetupGame();
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -531,6 +664,7 @@ int main(int argc, char* argv[])
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
+        
         // Computamos a posição da câmera utilizando coordenadas esféricas
         float current_time = (float)glfwGetTime();
         delta_t = current_time - prev_time;
@@ -584,6 +718,8 @@ int main(int argc, char* argv[])
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
         // efetivamente aplicadas em todos os pontos.
+        g_view_matrix = view;
+        g_projection_matrix = projection;
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
@@ -614,7 +750,8 @@ int main(int argc, char* argv[])
         DrawVirtualObject("the_bunny");
 
         // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f);
+        // Desenha o chão
+        model = Matrix_Translate(0.0f, -1.0f, 0.0f) * Matrix_Scale(25.0f, 1.0f, 25.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
@@ -642,8 +779,38 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, MORTAR);
         DrawVirtualObject("the_mortar_tower");
+        for (const auto& tower : g_towers)
+        {
+            // 1. Pega a posição da torre
+            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z);
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
+            // 2. Define o ID para o shader saber como colorir/texturizar
+            if (tower->blueprintName.find("CannonTower_V1") != std::string::npos) {
+                glUniform1i(g_object_id_uniform, CANNON);
+            } else if (tower->blueprintName == "Farm") {
+                glUniform1i(g_object_id_uniform, FARM);
+            } else if (tower->blueprintName == "RocketTower") {
+                glUniform1i(g_object_id_uniform, ROCKET);
+            } 
 
+            // 3. Desenha o modelo 3D que a própria torre diz para desenhar!
+            DrawVirtualObject(tower->modelName.c_str());
+        }
+
+        char text_buffer[100];
+
+        // Formata a string "Dinheiro: [valor]" e a coloca no buffer.
+        // %.0f formata o número float (g_playerMoney) sem casas decimais.
+        snprintf(text_buffer, sizeof(text_buffer), "Dinheiro: %.0f", g_playerMoney);
+
+        // Chama a função para desenhar o texto na tela
+        // Posição x=-0.95 (canto esquerdo) e y=0.95 (topo)
+        TextRendering_PrintString(window, text_buffer, -0.95f, 0.95f, 1.0f);
+
+        // Você pode adicionar outras informações da mesma forma
+        snprintf(text_buffer, sizeof(text_buffer), "Round: %d / %d", g_currentRound, g_totalRounds);
+        TextRendering_PrintString(window, text_buffer, -0.95f, 0.90f, 1.0f);
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
         TextRendering_ShowEulerAngles(window);
@@ -1280,6 +1447,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     // instante de tempo, e usamos esta movimentação para atualizar os
     // parâmetros que definem a posição da câmera dentro da cena virtual.
     // Assim, temos que o usuário consegue controlar a câmera.
+    g_cursor_x = xpos;
+    g_cursor_y = ypos;
 
     if (g_LeftMouseButtonPressed)
     {
@@ -1462,6 +1631,50 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             press_D = true;
         else if (action == GLFW_RELEASE)
             press_D = false;
+    }
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        printf("%.1f, %.1f, %.1f",pos.x, pos.y, pos.z);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("CannonTower_V1", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Canhão comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("Farm", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Farm comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+     if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("RocketTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
     }
 }
 

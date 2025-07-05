@@ -3,11 +3,11 @@
 #include <limits>
 
 // --- Implementação da Classe Tower ---
-
-Tower::Tower(const std::string& bpName, const glm::vec3& p, float r, float cd,
+Tower::Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
              std::unique_ptr<ITargeting> t, std::unique_ptr<IShooting> s, std::unique_ptr<IPassiveAbility> pa)
-    : blueprintName(bpName), pos(p), range(r), cooldown(cd),
-      targeting(std::move(t)), shooting(std::move(s)), passiveAbility(std::move(pa)) {}
+    // E o novo membro 'modelName' precisa ser inicializado aqui na lista
+    : blueprintName(bpName), modelName(mdlName), pos(p), range(r), cooldown(cd),
+      targeting(std::move(t)), shooting(std::move(s)), passiveAbility(std::move(pa)){}
 
 Hitbox Tower::rangeHitbox() const {
     return { pos, range };

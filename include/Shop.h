@@ -26,7 +26,7 @@ public:
         auto passive = bp.passiveFactory ? bp.passiveFactory() : nullptr;
 
         return std::unique_ptr<Tower>(new Tower(
-            bp.name, pos, bp.range, bp.cooldown,
+            bp.name, bp.modelName, pos, bp.range, bp.cooldown,
             std::move(targeting), std::move(shooting), std::move(passive)
         ));
     }
@@ -61,7 +61,7 @@ public:
         auto passive = next_bp.passiveFactory ? next_bp.passiveFactory() : nullptr;
 
         return std::unique_ptr<Tower>(new Tower(
-            next_bp.name, oldTower.pos, next_bp.range, next_bp.cooldown,
+            next_bp.name, next_bp.modelName, oldTower.pos, next_bp.range, next_bp.cooldown,
             std::move(targeting), std::move(shooting), std::move(passive)
         ));
     }
