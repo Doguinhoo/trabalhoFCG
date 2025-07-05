@@ -62,7 +62,7 @@ ObjModel::ObjModel(const char* filename, const char* basepath/*  = NULL */, bool
     printf("OK.\n");
 }
 
-SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages) {
+void Shape::buildTriangles() {
     GLuint vertex_array_object_id;
     glGenVertexArrays(1, &vertex_array_object_id);
     glBindVertexArray(vertex_array_object_id);
@@ -74,8 +74,8 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
 
     size_t shape_index = 0;
     bool found = false;
-    for (size_t shape = 0; shape < model.shapes.size(); ++shape) {
-        if (model.shapes[shape].name == shape_name) {
+    for (size_t shape = 0; shape < objectModel.shapes.size(); ++shape) {
+        if (objectModel.shapes[shape].name == shape_name) {
             shape_index = shape;
             found = true;
         }
@@ -84,7 +84,7 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     assert(found);
 
     size_t first_index = indices.size();
-    size_t num_triangles = model.shapes[shape_index].mesh.num_face_vertices.size();
+    size_t num_triangles = objectModel.shapes[shape_index].mesh.num_face_vertices.size();
 
     const float minval = std::numeric_limits<float>::min();
     const float maxval = std::numeric_limits<float>::max();
@@ -93,16 +93,16 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     glm::vec3 bbox_max = glm::vec3(minval,minval,minval);
 
     for (size_t triangle = 0; triangle < num_triangles; ++triangle) {
-        assert(model.shapes[shape_index].mesh.num_face_vertices[triangle] == 3);
+        assert(objectModel.shapes[shape_index].mesh.num_face_vertices[triangle] == 3);
 
         for (size_t vertex = 0; vertex < 3; ++vertex) {
-            tinyobj::index_t idx = model.shapes[shape_index].mesh.indices[3*triangle + vertex];
+            tinyobj::index_t idx = objectModel.shapes[shape_index].mesh.indices[3*triangle + vertex];
 
             indices.push_back(first_index + 3*triangle + vertex);
 
-            const float vx = model.attrib.vertices[3*idx.vertex_index + 0];
-            const float vy = model.attrib.vertices[3*idx.vertex_index + 1];
-            const float vz = model.attrib.vertices[3*idx.vertex_index + 2];
+            const float vx = objectModel.attrib.vertices[3*idx.vertex_index + 0];
+            const float vy = objectModel.attrib.vertices[3*idx.vertex_index + 1];
+            const float vz = objectModel.attrib.vertices[3*idx.vertex_index + 2];
             //printf("tri %d vert %d = (%.2f, %.2f, %.2f)\n", (int)triangle, (int)vertex, vx, vy, vz);
             model_coefficients.push_back(vx); // X
             model_coefficients.push_back(vy); // Y
@@ -122,9 +122,9 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
             // comparando se o índice retornado é -1. Fazemos isso abaixo.
 
             if (idx.normal_index != -1) {
-                const float nx = model.attrib.normals[3*idx.normal_index + 0];
-                const float ny = model.attrib.normals[3*idx.normal_index + 1];
-                const float nz = model.attrib.normals[3*idx.normal_index + 2];
+                const float nx = objectModel.attrib.normals[3*idx.normal_index + 0];
+                const float ny = objectModel.attrib.normals[3*idx.normal_index + 1];
+                const float nz = objectModel.attrib.normals[3*idx.normal_index + 2];
                 normal_coefficients.push_back(nx); // X
                 normal_coefficients.push_back(ny); // Y
                 normal_coefficients.push_back(nz); // Z
@@ -132,8 +132,8 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
             }
 
             if (idx.texcoord_index != -1) {
-                const float u = model.attrib.texcoords[2*idx.texcoord_index + 0];
-                const float v = model.attrib.texcoords[2*idx.texcoord_index + 1];
+                const float u = objectModel.attrib.texcoords[2*idx.texcoord_index + 0];
+                const float v = objectModel.attrib.texcoords[2*idx.texcoord_index + 1];
                 texture_coefficients.push_back(u);
                 texture_coefficients.push_back(v);
             }
@@ -142,7 +142,6 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
 
     size_t last_index = indices.size() - 1;
 
-    this->name           = model.shapes[shape_index].name;
     this->first_index    = first_index; // Primeiro índice
     this->num_indices    = last_index - first_index + 1; // Número de indices
     this->rendering_mode = GL_TRIANGLES;       // Índices correspondem ao tipo de rasterização GL_TRIANGLES.
@@ -201,9 +200,13 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
     // alterar o mesmo. Isso evita bugs.
     glBindVertexArray(0);
+}
 
-    this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
-    this->textureImages = textureImages;
+Shape::Shape(ObjModel& objectModel, const char *shape_name) :
+    objectModel(objectModel),
+    shape_name(shape_name)
+{
+    this->buildTriangles();
 }
 
 // Constrói triângulos para futura renderização a partir de um ObjModel.
@@ -349,32 +352,20 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     glBindVertexArray(0);
 } */
 
-void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
-    glUseProgram(this->gpuProgram);
+glm::vec3 Shape::get_bbox_min() {
+    return this->bbox_min;
+}
 
+glm::vec3 Shape::get_bbox_max() {
+    return this->bbox_max;
+}
+
+
+void Shape::draw() {
     // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
     // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
     // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
     glBindVertexArray(this->vertex_array_object_id);
-
-    GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
-    GLuint view_uniform = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
-    GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
-    glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-
-    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
-    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
-    GLuint bbox_min_uniform = glGetUniformLocation(this->gpuProgram, "bbox_min"); // Variável da matriz "bbox_min"
-    GLuint bbox_max_uniform = glGetUniformLocation(this->gpuProgram, "bbox_max"); // Variável da matriz "bbox_max"
-    glm::vec3 bbox_min = this->bbox_min;
-    glm::vec3 bbox_max = this->bbox_max;
-    glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
-    glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
- 
-    GLuint texture_images_uniform = glGetUniformLocation(this->gpuProgram, "TextureImages"); // Variável da matriz "model" 
-    glUniform1iv(texture_images_uniform, std::min(MAX_TEXTURES, this->textureImages.size()), this->textureImages.data());
 
     // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
     // apontados pelo VAO como linhas. Veja a definição de
@@ -391,6 +382,40 @@ void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projecti
     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
     // alterar o mesmo. Isso evita bugs.
     glBindVertexArray(0);
+}
+
+
+SceneObject::SceneObject(Shape &shapeObject, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages) :
+    shapeObject(shapeObject),
+    textureImages(textureImages)
+{
+    this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
+}
+
+void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
+    glUseProgram(this->gpuProgram);
+
+    GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
+    GLuint view_uniform = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
+    GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
+    glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+
+    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
+    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
+    GLuint bbox_min_uniform = glGetUniformLocation(this->gpuProgram, "bbox_min"); // Variável da matriz "bbox_min"
+    GLuint bbox_max_uniform = glGetUniformLocation(this->gpuProgram, "bbox_max"); // Variável da matriz "bbox_max"
+    glm::vec3 bbox_min = this->shapeObject.get_bbox_min();
+    glm::vec3 bbox_max = this->shapeObject.get_bbox_max();
+    glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
+    glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+ 
+    GLuint texture_images_uniform = glGetUniformLocation(this->gpuProgram, "TextureImages"); // Variável da matriz "model" 
+    glUniform1iv(texture_images_uniform, std::min(MAX_TEXTURES, this->textureImages.size()), this->textureImages.data());
+
+    this->shapeObject.draw();
+ 
     glUseProgram(0);
 }
 

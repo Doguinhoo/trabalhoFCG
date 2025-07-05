@@ -20,22 +20,35 @@ struct ObjModel {
     ObjModel(const char* filename, const char* basepath = NULL, bool triangulate = true);
 };
 
-// Definimos uma estrutura que armazenará dados necessários para renderizar
-// cada objeto da cena virtual.
-class SceneObject {
-    std::string name;        // Nome do objeto (cova esteve aqui)
-    GLuint gpuProgram; // Programa de GPU usado para renderizar o objeto
+class Shape {
+    ObjModel& objectModel;
+    const char *shape_name;
+
     size_t first_index; // Índice do primeiro vértice dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
-    GLuint GpuProgram; // Programa de gpu usado pra renderizar o objeto
     size_t num_indices; // Número de índices do objeto dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
     GLenum rendering_mode; // Modo de rasterização (GL_TRIANGLES, GL_TRIANGLE_STRIP, etc.)
     GLuint vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
     glm::vec3 bbox_min; // Axis-Aligned Bounding Box do objeto
     glm::vec3 bbox_max;
+
+    void buildTriangles();
+
+    public:
+        Shape(ObjModel& objectModel, const char *shape_name);
+        glm::vec3 get_bbox_min();
+        glm::vec3 get_bbox_max();
+        void draw();
+};
+
+// Definimos uma estrutura que armazenará dados necessários para renderizar
+// cada objeto da cena virtual.
+class SceneObject {
+    Shape& shapeObject;
+    GLuint gpuProgram; // Programa de GPU usado para renderizar o objeto
     std::vector<GLint> textureImages;
 
     public:
-        SceneObject(ObjModel&, const char *, const char *, const char *, std::vector<GLint>);
+        SceneObject(Shape& shapeObject, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages);
         void draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
 };
 

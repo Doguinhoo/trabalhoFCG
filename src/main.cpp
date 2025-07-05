@@ -206,19 +206,27 @@ int main(int argc, char* argv[]) {
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
-    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl", textureImages);
+    Shape sphereShape(sphereModel, "the_sphere");
+    SceneObject sphereObject(sphereShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl", textureImages);
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
-    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl", textureImages);
+    Shape bunnyShape(bunnyModel, "the_bunny");
+    SceneObject bunnyObject(bunnyShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl", textureImages);
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
-    SceneObject planeObject(planeModel, "the_plane", "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl", textureImages);
+    Shape planeShape(planeModel, "the_plane");
+    SceneObject planeObject(planeShape, "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl", textureImages);
+
+    ObjModel *extraModel;
+    Shape *extraShape;
+    SceneObject *extraObject;
 
     if (argc >= 5) {
-        ObjModel extraModel(argv[1]);
-        SceneObject extraObject(extraModel, argv[2], argv[3], argv[4], textureImages);
+        extraModel = new ObjModel(argv[1]);
+        extraShape = new Shape(*extraModel, argv[2]);
+        extraObject = new SceneObject(*extraShape, argv[3], argv[4], textureImages);
     }
 
     // Inicializamos o código para renderização de texto.
