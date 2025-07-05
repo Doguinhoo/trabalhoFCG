@@ -204,15 +204,15 @@ int main(int argc, char* argv[]) {
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
-    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
+    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl");
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
-    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
+    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl");
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
-    SceneObject planeObject(planeModel, "the_plane", "../../src/shader_vertex.glsl", "../../src/shader_fragment.glsl");
+    SceneObject planeObject(planeModel, "the_plane", "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl");
 
     if (argc >= 5) {
         ObjModel extraModel(argv[1]);
