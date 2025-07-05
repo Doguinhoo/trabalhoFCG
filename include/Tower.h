@@ -34,9 +34,12 @@ public:
     std::string blueprintName;
     std::string modelName; 
     glm::vec3 pos;
+    Hitbox    hitbox;
     float     range;
     float     cooldown;
     float     timer = 0.f;
+    Enemy* currentTarget = nullptr; 
+    float  currentYRotation = 0.0f; 
 
     std::unique_ptr<ITargeting> targeting;
     std::unique_ptr<IShooting>  shooting;

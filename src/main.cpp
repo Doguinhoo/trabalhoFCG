@@ -841,7 +841,9 @@ int main(int argc, char* argv[])
         for (const auto& tower : g_towers)
         {
             // Pega a posição da torre
-            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z);
+            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z)
+                    * Matrix_Rotate_Y(tower->currentYRotation); // <-- A MÁGICA ACONTECE AQUI
+                   
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
             // Define o ID para o shader saber como colorir/texturizar
@@ -872,7 +874,7 @@ int main(int argc, char* argv[])
             DrawVirtualObject("the_bunny");
         }
 
-        // desenha o range da
+        // desenha o range da torre
         if (g_selectedTower != nullptr)
         {
             // Habilita a transparência

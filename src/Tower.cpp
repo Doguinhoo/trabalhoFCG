@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include "Tower.h"
 #include <glm/gtx/vector_angle.hpp>
 #include <limits>
@@ -14,13 +16,28 @@ Hitbox Tower::rangeHitbox() const {
 }
 
 void Tower::update(float dt, const std::vector<Enemy*>& enemies) {
-    if (!targeting || !shooting) return;
+    if (!targeting) return; // Torres passivas (Farm) não fazem nada aqui.
+
+    // 1. A torre usa sua estratégia para escolher um alvo da lista de inimigos.
+    currentTarget = targeting->pick(enemies, *this);
+
+    // 2. Se um alvo foi encontrado, a torre se vira para ele.
+    if (currentTarget != nullptr)
+    {
+        // Calcula o vetor de direção da torre para o inimigo no plano (XZ)
+        glm::vec3 direction = currentTarget->hitbox.center - this->pos;
+        float targetYRotation = atan2(direction.x, direction.z); //+ (float) M_PI;
+        
+        // Interpola suavemente da rotação atual para a rotação do alvo.
+        currentYRotation += (targetYRotation - currentYRotation) * 10.0f * dt;
+    }
+
+    // 3. Lógica de tiro (só atira se tiver um alvo e o cooldown estiver zerado)
     timer -= dt;
-    if (timer <= 0.f) {
-        if (Enemy* tgt = targeting->pick(enemies, *this)) {
-            shooting->fire(tgt, *this, enemies);
-            timer = cooldown;
-        }
+    if (shooting && currentTarget != nullptr && timer <= 0.f)
+    {
+        shooting->fire(currentTarget, *this, enemies);
+        timer = cooldown; // Reseta o cooldown
     }
 }
 
