@@ -201,22 +201,24 @@ int main(int argc, char* argv[]) {
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);      // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif", 1); // TextureImage1
 
+    GLint textureImagesArray[] = {0, 1};
+    std::vector<GLint> textureImages(textureImagesArray, textureImagesArray + 2);
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
-    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl");
+    SceneObject sphereObject(sphereModel, "the_sphere", "../../src/vertex_shader.glsl", "../../src/fragment_shader_sphere.glsl", textureImages);
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
-    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl");
+    SceneObject bunnyObject(bunnyModel, "the_bunny", "../../src/vertex_shader.glsl", "../../src/fragment_shader_bunny.glsl", textureImages);
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
-    SceneObject planeObject(planeModel, "the_plane", "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl");
+    SceneObject planeObject(planeModel, "the_plane", "../../src/vertex_shader.glsl", "../../src/fragment_shader_plane.glsl", textureImages);
 
     if (argc >= 5) {
         ObjModel extraModel(argv[1]);
-        SceneObject extraObject(extraModel, argv[2], argv[3], argv[4]);
+        SceneObject extraObject(extraModel, argv[2], argv[3], argv[4], textureImages);
     }
 
     // Inicializamos o código para renderização de texto.

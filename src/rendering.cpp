@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 #include "matrices.hpp"
 
@@ -61,7 +62,7 @@ ObjModel::ObjModel(const char* filename, const char* basepath/*  = NULL */, bool
     printf("OK.\n");
 }
 
-SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *vertex_shader_file_name, const char *fragment_shader_file_name) {
+SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages) {
     GLuint vertex_array_object_id;
     glGenVertexArrays(1, &vertex_array_object_id);
     glBindVertexArray(vertex_array_object_id);
@@ -202,6 +203,7 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     glBindVertexArray(0);
 
     this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
+    this->textureImages = textureImages;
 }
 
 // Constrói triângulos para futura renderização a partir de um ObjModel.
@@ -348,28 +350,31 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
 } */
 
 void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
-    GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
-    GLuint view_uniform = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
-    GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
-
     glUseProgram(this->gpuProgram);
 
     // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
     // vértices apontados pelo VAO criado pela função BuildTrianglesAndAddToVirtualScene(). Veja
     // comentários detalhados dentro da definição de BuildTrianglesAndAddToVirtualScene().
     glBindVertexArray(this->vertex_array_object_id);
+
+    GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
+    GLuint view_uniform = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
+    GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
     glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
     // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
     // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
-    GLuint bbox_min_uniform = glGetUniformLocation(this->gpuProgram, "bbox_min"); // Variável da matriz "model"
-    GLuint bbox_max_uniform = glGetUniformLocation(this->gpuProgram, "bbox_max"); // Variável da matriz "model"
+    GLuint bbox_min_uniform = glGetUniformLocation(this->gpuProgram, "bbox_min"); // Variável da matriz "bbox_min"
+    GLuint bbox_max_uniform = glGetUniformLocation(this->gpuProgram, "bbox_max"); // Variável da matriz "bbox_max"
     glm::vec3 bbox_min = this->bbox_min;
     glm::vec3 bbox_max = this->bbox_max;
     glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
     glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+ 
+    GLuint texture_images_uniform = glGetUniformLocation(this->gpuProgram, "TextureImages"); // Variável da matriz "model" 
+    glUniform1iv(texture_images_uniform, std::min(MAX_TEXTURES, this->textureImages.size()), this->textureImages.data());
 
     // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
     // apontados pelo VAO como linhas. Veja a definição de
@@ -620,7 +625,7 @@ void PrintObjModelInfo(ObjModel* model) {
 }
 
 // Função que carrega uma imagem para ser utilizada como textura
-void LoadTextureImage(const char* filename, int number) {
+void LoadTextureImage(const char* filename, GLuint number) {
     printf("Carregando imagem \"%s\"... ", filename);
 
     // Primeiro fazemos a leitura da imagem do disco
@@ -630,8 +635,7 @@ void LoadTextureImage(const char* filename, int number) {
     int channels;
     unsigned char *data = stbi_load(filename, &width, &height, &channels, 3);
 
-    if ( data == NULL )
-    {
+    if (data == NULL) {
         fprintf(stderr, "ERROR: Cannot open image file \"%s\".\n", filename);
         std::exit(EXIT_FAILURE);
     }
