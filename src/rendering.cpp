@@ -347,9 +347,9 @@ SceneObject::SceneObject(ObjModel &model, const char *shape_name, const char *ve
     glBindVertexArray(0);
 } */
 
-void SceneObject::startRender(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
-    GLuint model_uniform      = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
-    GLuint view_uniform       = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
+void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
+    GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
+    GLuint view_uniform = glGetUniformLocation(this->gpuProgram, "view"); // Variável da matriz "view"
     GLuint projection_uniform = glGetUniformLocation(this->gpuProgram, "projection"); // Variável da matriz "projection"
 
     glUseProgram(this->gpuProgram);
@@ -361,9 +361,16 @@ void SceneObject::startRender(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 p
     glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-}
 
-void SceneObject::render() {
+    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
+    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
+    GLuint bbox_min_uniform = glGetUniformLocation(this->gpuProgram, "bbox_min"); // Variável da matriz "model"
+    GLuint bbox_max_uniform = glGetUniformLocation(this->gpuProgram, "bbox_max"); // Variável da matriz "model"
+    glm::vec3 bbox_min = this->bbox_min;
+    glm::vec3 bbox_max = this->bbox_max;
+    glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
+    glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+
     // Pedimos para a GPU rasterizar os vértices dos eixos XYZ
     // apontados pelo VAO como linhas. Veja a definição de
     // g_VirtualScene[""] dentro da função BuildTrianglesAndAddToVirtualScene(), e veja
@@ -375,27 +382,11 @@ void SceneObject::render() {
         GL_UNSIGNED_INT,
         (void*)(this->first_index * sizeof(GLuint))
     );
-}
 
-void SceneObject::endRender() {
     // "Desligamos" o VAO, evitando assim que operações posteriores venham a
     // alterar o mesmo. Isso evita bugs.
     glBindVertexArray(0);
     glUseProgram(0);
-}
-
-void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
-    startRender(model, view, projection);
-    render();
-    endRender();
-
-    // TODO dar um jeito nisso
-    // Setamos as variáveis "bbox_min" e "bbox_max" do fragment shader
-    // com os parâmetros da axis-aligned bounding box (AABB) do modelo.
-    // glm::vec3 bbox_min = this->bbox_min;
-    // glm::vec3 bbox_max = this->bbox_max;
-    // glUniform4f(g_bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
-    // glUniform4f(g_bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
 }
 
 // Função que computa as normais de um ObjModel, caso elas não tenham sido

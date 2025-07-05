@@ -31,10 +31,6 @@ class SceneObject {
     glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
     glm::vec3    bbox_max;
 
-    void startRender(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
-    void render();
-    void endRender();
-
     public:
         SceneObject(ObjModel&, const char *, const char *, const char *);
         void draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
