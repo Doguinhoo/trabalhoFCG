@@ -26,7 +26,8 @@ uniform mat4 projection;
 #define FARM 4
 #define CANNON_TOWER 5
 #define MORTAR_TOWER 6
-
+#define SKYBOX 7
+#define RANGE_INDICATOR 8
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -40,6 +41,7 @@ uniform sampler2D TextureImage2;
 uniform sampler2D TextureImage3;
 uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
+uniform sampler2D TextureImage6;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -167,6 +169,17 @@ void main()
 
         vec3 kd_rocket = texture(TextureImage5, vec2(U,V)).rgb;
         color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else if ( object_id == SKYBOX )
+    {
+
+        vec3 kd_rocket = texture(TextureImage6, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else if (object_id == RANGE_INDICATOR)
+    {
+
+        color = vec4(0.1, 0.5, 1.0, 0.3);
     }
     else // objetos (BUNNY, PLANE)
     {

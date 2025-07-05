@@ -240,7 +240,7 @@ float delta_t;
 
 
 // velocidade da camera
-float speed = 0.5f;
+float speed = 2.5f;
 
 // Teclas de movimentação
 bool press_W = false;
@@ -254,14 +254,16 @@ bool press_A = false;
 EnemyManager g_enemyManager;
 Shop g_shop;
 std::vector<std::unique_ptr<Tower>> g_towers;
-float g_playerMoney = 1000.0f;
+float g_playerMoney = 500.0f;
 std::shared_ptr<Path> g_enemyPath;
 double g_cursor_x = 0.0;
 double g_cursor_y = 0.0;
 int   g_currentRound = 0;
 const int g_totalRounds = 20;
-bool  g_isRoundActive = false; // Controla se inimigos estão vindo
-float g_intermissionTimer = 5.0f; // Tempo de pausa entre os rounds (5s)
+bool  g_isRoundActive = false;
+float g_intermissionTimer = 10.0f;
+int g_enemiesToSpawnForRound = 0;
+Tower* g_selectedTower = nullptr;
 glm::mat4 g_view_matrix;
 glm::mat4 g_projection_matrix;
 
@@ -561,13 +563,13 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
+    LoadTextureImage("../../data/grama.jpg");                        // TextureImage0
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
     LoadTextureImage("../../data/rocket_tower.jpg");                 // TextureImage2
     LoadTextureImage("../../data/farm.jpg");                         // TextureImage3
     LoadTextureImage("../../data/cannon_tower.jpg");                 // TextureImage4
     LoadTextureImage("../../data/mortar_tower.jpg");                 // TextureImage5
-
+    LoadTextureImage("../../data/ceu.jpg");                          // TextureImage6
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -621,6 +623,61 @@ int main(int argc, char* argv[])
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
+        // Computamos a posição da câmera utilizando coordenadas esféricas
+        float current_time = (float)glfwGetTime();
+        delta_t = current_time - prev_time;
+        prev_time = current_time;
+
+        if (g_isRoundActive)
+        {
+            static float spawnTimer = 1.0f; // Timer para controlar a velocidade de spawn
+            spawnTimer -= delta_t;
+            
+            // CORRIGIDO: Usa a variável global g_enemiesToSpawnForRound
+            if (spawnTimer <= 0.0f && g_enemiesToSpawnForRound > 0)
+            {
+                // Cria um novo inimigo
+                auto newEnemy = std::unique_ptr<Enemy>(new Enemy(
+                    g_enemyPath->getStartPoint(),
+                    0.5f, 
+                    100.0f + g_currentRound * 20, // Vida aumenta com os rounds
+                    3.0f,
+                    EnemyAttribute::RESISTANT,
+                    10 + g_currentRound * 2,      // Recompensa aumenta com os rounds
+                    std::unique_ptr<BezierMovement>(new BezierMovement(g_enemyPath))
+                ));
+                g_enemyManager.spawn(std::move(newEnemy));
+                
+                spawnTimer = 1.5f; // Reseta o timer para o próximo spawn
+
+                // CORRIGIDO: Decrementa a variável global correta
+                g_enemiesToSpawnForRound--;
+            }
+
+            // Atualiza a lógica de todos os inimigos (movimento, etc.)
+            g_enemyManager.updateAll(delta_t, g_playerMoney);
+            auto enemy_pointers = g_enemyManager.getEnemyPointers();
+
+            // Atualiza a lógica de todas as torres (mirar e atirar)
+            for(const auto& tower : g_towers) {
+                tower->update(delta_t, enemy_pointers);
+            }
+
+            // CORRIGIDO: A condição de fim de round também usa a variável global
+            if (enemy_pointers.empty() && g_enemiesToSpawnForRound == 0) {
+                g_isRoundActive = false;
+                g_intermissionTimer = 10.0f; // Começa a contagem para o próximo round
+                printf("Round %d concluido!\n", g_currentRound);
+                for(const auto& tower : g_towers) {
+                    tower->updateEndOfRound(g_playerMoney);
+                }
+            }
+        }
+        else // Pausa entre os rounds
+        {
+            g_intermissionTimer -= delta_t;
+        }
+
         // Aqui executamos as operações de renderização
 
         // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
@@ -659,10 +716,6 @@ int main(int argc, char* argv[])
         glm::mat4 projection;
 
         
-        // Computamos a posição da câmera utilizando coordenadas esféricas
-        float current_time = (float)glfwGetTime();
-        delta_t = current_time - prev_time;
-        prev_time = current_time;
                 // Calculamos os vetores da base da câmera
         glm::vec4 w = -camera_view_vector / norm(camera_view_vector);
         glm::vec4 u = crossproduct(camera_up_vector, w);
@@ -684,7 +737,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -299.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -725,7 +778,17 @@ int main(int argc, char* argv[])
         #define FARM 4
         #define CANNON 5
         #define MORTAR 6
+        #define SKYBOX 7
+        #define RANGE_INDICATOR 8
 
+        glDepthFunc(GL_LEQUAL); 
+        glUseProgram(g_GpuProgramID); 
+        model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z) 
+            * Matrix_Scale(95.0f, 95.0f, 95.0f);
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SKYBOX);
+        DrawVirtualObject("the_sphere"); // Usando a esfera como skybox
+        glDepthFunc(GL_LESS); 
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
@@ -745,7 +808,7 @@ int main(int argc, char* argv[])
 
         // Desenhamos o plano do chão
         // Desenha o chão
-        model = Matrix_Translate(0.0f, -1.0f, 0.0f) * Matrix_Scale(25.0f, 1.0f, 25.0f);
+        model = Matrix_Translate(0.0f, -1.5f, 0.0f) * Matrix_Scale(25.0f, 1.0f, 25.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
@@ -792,6 +855,43 @@ int main(int argc, char* argv[])
 
             // Desenha o modelo
             DrawVirtualObject(tower->modelName.c_str());
+        }
+
+            auto enemy_pointers = g_enemyManager.getEnemyPointers();
+
+
+        // Percorre a lista de inimigos e desenha cada um
+        for (const auto* enemy : enemy_pointers)
+        {
+            //  Cria a matriz para posicionar o inimigo no mundo
+            model = Matrix_Translate(enemy->hitbox.center.x, enemy->hitbox.center.y, enemy->hitbox.center.z)
+                * Matrix_Scale(enemy->hitbox.radius, enemy->hitbox.radius, enemy->hitbox.radius); 
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+
+            //   desenha o modelo do inimigo (Usando o coelho pra testar)
+            DrawVirtualObject("the_bunny");
+        }
+
+        // desenha o range da
+        if (g_selectedTower != nullptr)
+        {
+            // Habilita a transparência
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            
+            // Posição da esfera é o centro da torre selecionada
+            model = Matrix_Translate(g_selectedTower->pos.x, g_selectedTower->pos.y, g_selectedTower->pos.z)
+                // A escala é igual ao raio de alcance da torre em todas as direções
+                * Matrix_Scale(g_selectedTower->range, g_selectedTower->range, g_selectedTower->range);
+            
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(g_object_id_uniform, RANGE_INDICATOR);
+            
+            // CORREÇÃO: Desenha a geometria da esfera em vez do plano
+            DrawVirtualObject("the_sphere"); 
+            
+            // Desabilita a transparência para não afetar outros objetos
+            glDisable(GL_BLEND);
         }
 
         // Mostrar dinheiro e round na tela
@@ -969,6 +1069,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage3"), 3);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage4"), 4);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUseProgram(0);
 }
 
@@ -1386,6 +1487,50 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
         // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
+        glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
+        
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
+        float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height;
+        
+        glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
+        glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
+        ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+        
+        glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
+
+        // 2. Itera por todas as torres para ver se o raio colide com alguma
+        Tower* clicked_tower = nullptr;
+        float closest_intersection = std::numeric_limits<float>::infinity();
+
+        for (const auto& tower : g_towers)
+        {
+            // Teste de interseção Raio-Esfera (hitbox da torre)
+            float radius = 1.0f; // Raio da hitbox da torre (pode ser definido no blueprint)
+            glm::vec3 oc = ray_origin - tower->pos;
+            float a = dot(ray_world_dir, ray_world_dir);
+            float b = 2.0 * dot(oc, ray_world_dir);
+            float c = dot(oc, oc) - radius*radius;
+            float discriminant = b*b - 4*a*c;
+
+            if (discriminant >= 0) {
+                float t = (-b - sqrt(discriminant)) / (2.0f * a);
+                if (t < closest_intersection) {
+                    closest_intersection = t;
+                    clicked_tower = tower.get();
+                }
+            }
+        }
+        
+        // 3. Atualiza a torre selecionada
+        g_selectedTower = clicked_tower;
+
+        if (g_selectedTower) {
+            printf("Torre '%s' selecionada!\n", g_selectedTower->blueprintName.c_str());
+        } else {
+            printf("Nenhuma torre selecionada.\n");
+        }
     }
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
     {
@@ -1621,6 +1766,16 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         else if (action == GLFW_RELEASE)
             press_D = false;
     }
+
+    // a tecla G inicia um round
+    if (key == GLFW_KEY_G && action == GLFW_PRESS && !g_isRoundActive)
+    {
+        g_isRoundActive = true;
+        g_currentRound++;
+        g_enemiesToSpawnForRound = 5 + g_currentRound * 2;
+        printf("Iniciando Round %d com %d inimigos!\n", g_currentRound, g_enemiesToSpawnForRound);
+    }
+
     if (key == GLFW_KEY_1 && action == GLFW_PRESS)
     {
         glm::vec3 pos = GetCursorWorldPosition(window);

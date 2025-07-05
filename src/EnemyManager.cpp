@@ -5,17 +5,30 @@ void EnemyManager::spawn(std::unique_ptr<Enemy> enemy) {
     enemies.emplace_back(std::move(enemy));
 }
 
-void EnemyManager::updateAll(float dt) {
+void EnemyManager::updateAll(float dt, float& playerMoney) {
     for (auto& e : enemies) {
         e->update(dt);
     }
-    cleanup();
+    cleanup(playerMoney);
 }
 
-void EnemyManager::renderAll() const {
-    for (const auto& e : enemies) {
-        // ex: DrawSphere(e->hitbox.center, e->hitbox.radius);
-    }
+void EnemyManager::cleanup(float& playerMoney) {
+    enemies.erase(
+        std::remove_if(
+            enemies.begin(), enemies.end(),
+            // A lambda agora captura playerMoney por referência
+            [&playerMoney](const std::unique_ptr<Enemy>& e) {
+                if (!e->alive) {
+                    // Se o inimigo está morto, adiciona a recompensa!
+                    playerMoney += e->reward;
+                    printf("+%d de dinheiro! Inimigo derrotado.\n", e->reward);
+                    return true; // Retorna true para marcar para remoção
+                }
+                return false;
+            }
+        ),
+        enemies.end()
+    );
 }
 
 std::vector<Enemy*> EnemyManager::getEnemyPointers() const {
@@ -27,16 +40,4 @@ std::vector<Enemy*> EnemyManager::getEnemyPointers() const {
         }
     }
     return out;
-}
-
-void EnemyManager::cleanup() {
-    enemies.erase(
-        std::remove_if(
-            enemies.begin(), enemies.end(),
-            [](const std::unique_ptr<Enemy>& e) {
-                return !e->alive;
-            }
-        ),
-        enemies.end()
-    );
 }

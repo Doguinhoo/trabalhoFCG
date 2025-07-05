@@ -36,9 +36,15 @@ public:
     bool                       alive = true;
     std::unique_ptr<IMovement> movement;
     float                      distanceTraveled = 0.0f;
-
-    Enemy(const glm::vec3& pos, float radius, float hp, float speed, EnemyAttribute attr, std::unique_ptr<IMovement> mv)
-      : hitbox{pos, radius}, health(hp), baseSpeed(speed), attribute(attr), movement(std::move(mv)) {}
+    float                      reward;
+    
+    Enemy(const glm::vec3& pos, float radius, float hp, float speed, EnemyAttribute attr, int rewardValue, std::unique_ptr<IMovement> mv)
+      : hitbox{pos, radius}, 
+        health(hp), 
+        baseSpeed(speed), 
+        attribute(attr), 
+        reward(rewardValue), 
+        movement(std::move(mv)) {}
 
     float speed() const {
         if (attribute == EnemyAttribute::FAST) return baseSpeed * 1.5f;
@@ -67,7 +73,9 @@ struct BezierMovement : IMovement {
         e.distanceTraveled += e.speed() * dt;
         if (e.distanceTraveled >= caminho->getTotalLength()) {
             e.hitbox.center = caminho->getEndPoint();
-            e.alive = false;
+            e.alive = false;                   
+            e.reward = 0; 
+            printf("Um inimigo chegou a base!\n"); 
             return;
         }
         float t = caminho->getTForDistance(e.distanceTraveled);
