@@ -302,6 +302,19 @@ static std::unique_ptr<ITargeting> makeFlyingPriority() {
 
 std::vector<std::function<std::unique_ptr<ITargeting>()>> g_targetingFactories;
 
+struct SpawnEvent {
+    float timeToNextSpawn; // Tempo de espera após o inimigo anterior
+    EnemyAttribute type;   // Tipo do inimigo (Normal/Resistant, Fast, Flying)
+    // Você pode adicionar mais campos aqui, como vida extra, etc.
+};
+
+// Descreve uma onda completa, que é uma sequência de eventos de spawn
+struct Wave {
+    std::vector<SpawnEvent> spawns;
+};
+
+// Lista global que define as ondas para cada round do jogo
+std::vector<Wave> g_roundWaves;
 
 void SetupGame()
 {
@@ -323,6 +336,39 @@ void SetupGame()
     g_targetingFactories.push_back(makeWeakest); 
     g_targetingFactories.push_back(makeNearest);
     g_targetingFactories.push_back(makeFlyingPriority);
+
+    //
+        g_roundWaves.clear();
+
+    // Inimigos normais e simples
+    Wave round1;
+    for (int i = 0; i < 10; ++i) {
+        round1.spawns.push_back({1.5f, EnemyAttribute::RESISTANT}); // 10 inimigos resistentes, com 1.5s entre eles
+    }
+    g_roundWaves.push_back(round1);
+
+    // RInimigos um pouco mais rápidos e misturados
+    Wave round2;
+    for (int i = 0; i < 8; ++i) {
+        round2.spawns.push_back({1.0f, EnemyAttribute::RESISTANT});
+    }
+    for (int i = 0; i < 5; ++i) {
+        round2.spawns.push_back({0.8f, EnemyAttribute::FAST}); // Adiciona 5 inimigos rápidos no final
+    }
+    g_roundWaves.push_back(round2);
+
+    // Introdução de inimigos voadores
+    Wave round3;
+    for (int i = 0; i < 10; ++i) {
+        round3.spawns.push_back({1.2f, EnemyAttribute::RESISTANT});
+        if (i % 3 == 0) { // A cada 3 inimigos de chão, vem um voador
+            round3.spawns.push_back({0.5f, EnemyAttribute::FLYING});
+        }
+    }
+    g_roundWaves.push_back(round3);
+
+
+
     // --- Torre de Canhão ---
     TowerBlueprint cannonV1_bp;
     cannonV1_bp.name = "CannonTower_V1";
@@ -352,6 +398,7 @@ void SetupGame()
     TowerBlueprint rocket_bp;
     rocket_bp.name = "RocketTower";
     rocket_bp.modelName = "the_rocket_tower";
+    rocket_bp.canTargetFlying = true;
     rocket_bp.cost = 175;
     rocket_bp.range = 12.0f;
     rocket_bp.cooldown = 3.0f;
@@ -973,8 +1020,21 @@ int main(int argc, char* argv[])
             }
             
 
-            // Mostra as opções (botões)
-            TextRendering_PrintString(window, "[U] - Upgrade", -0.95f, text_y - 5*line_height);
+            const auto& current_bp = g_shop.getBlueprint(g_selectedTower->blueprintName);
+            if (current_bp && !current_bp->nextUpgradeName.empty())
+            {
+                //  Se houver um upgrade, pega o custo dele
+                const auto& next_bp = g_shop.getBlueprint(current_bp->nextUpgradeName);
+                if (next_bp) {
+                    snprintf(buffer, sizeof(buffer), "[U] - Upgrade (Custo: %d)", current_bp->upgradeCost);
+                    TextRendering_PrintString(window, buffer, -0.95f, text_y - 5 * line_height);
+                }
+            }
+            else
+            {
+                TextRendering_PrintString(window, "[U] - Upgrade (Nivel Maximo)", -0.95f, text_y - 5 * line_height);
+            }
+
             TextRendering_PrintString(window, "[V] - Vender", -0.95f, text_y - 6*line_height);
             TextRendering_PrintString(window, "[F] - Ver da Torre", -0.95f, text_y - 7*line_height);
             TextRendering_PrintString(window, "[Q] - Mudar Foco", -0.95f, text_y - 8*line_height);

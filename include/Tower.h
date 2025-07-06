@@ -35,24 +35,25 @@ struct IPassiveAbility {
 class Tower {
 public:
     std::string blueprintName;
-    std::string modelName; 
+    std::string modelName;
     glm::vec3 pos;
     Hitbox    hitbox;
     float     range;
     float     cooldown;
+    bool      canTargetFlying; 
     float     timer = 0.f;
-    int    targetingModeIndex = 0;
-    Enemy* currentTarget = nullptr; 
-    float  currentYRotation = 0.0f; 
+    int       targetingModeIndex = 0;
+    Enemy*    currentTarget = nullptr;
+    float     currentYRotation = 0.0f;
 
     std::unique_ptr<ITargeting> targeting;
     std::unique_ptr<IShooting>  shooting;
     std::unique_ptr<IPassiveAbility> passiveAbility;
 
     Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
-        std::unique_ptr<ITargeting> t,
-        std::unique_ptr<IShooting>  s,
-        std::unique_ptr<IPassiveAbility> pa);
+          std::unique_ptr<ITargeting> t,
+          std::unique_ptr<IShooting>  s,
+          std::unique_ptr<IPassiveAbility> pa);
 
     Hitbox rangeHitbox() const;
     void update(float dt, const std::vector<Enemy*>& enemies);

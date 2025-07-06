@@ -4,12 +4,21 @@
 #include <glm/gtx/vector_angle.hpp>
 #include <limits>
 
-// --- Implementação da Classe Tower ---
 Tower::Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
              std::unique_ptr<ITargeting> t, std::unique_ptr<IShooting> s, std::unique_ptr<IPassiveAbility> pa)
-    // A lista de inicialização agora inclui a hitbox
-    : blueprintName(bpName), modelName(mdlName), pos(p), hitbox({p, 1.0f}), range(r), cooldown(cd),
-      targeting(std::move(t)), shooting(std::move(s)), passiveAbility(std::move(pa)){}
+    // A lista de inicialização agora cria a hitbox com um raio padrão de 1.0f
+    : blueprintName(bpName),
+      modelName(mdlName),
+      pos(p),
+      hitbox({p, 1.0f}),
+      range(r),
+      cooldown(cd),
+      targeting(std::move(t)),
+      shooting(std::move(s)),
+      passiveAbility(std::move(pa))
+{
+    // O corpo do construtor pode ficar vazio
+}
 
 Hitbox Tower::rangeHitbox() const {
     return { pos, range };
@@ -18,26 +27,26 @@ Hitbox Tower::rangeHitbox() const {
 void Tower::update(float dt, const std::vector<Enemy*>& enemies) {
     if (!targeting) return; // Torres passivas (Farm) não fazem nada aqui.
 
-    // 1. A torre usa sua estratégia para escolher um alvo da lista de inimigos.
+    //  A torre usa sua estratégia para escolher um alvo da lista de inimigos.
     currentTarget = targeting->pick(enemies, *this);
 
-    // 2. Se um alvo foi encontrado, a torre se vira para ele.
+    //  Se um alvo foi encontrado, a torre se vira para ele.
     if (currentTarget != nullptr)
     {
         // Calcula o vetor de direção da torre para o inimigo no plano (XZ)
         glm::vec3 direction = currentTarget->hitbox.center - this->pos;
-        float targetYRotation = atan2(direction.x, direction.z); //+ (float) M_PI;
+        float targetYRotation = atan2(direction.x, direction.z); 
         
         // Interpola suavemente da rotação atual para a rotação do alvo.
         currentYRotation += (targetYRotation - currentYRotation) * 10.0f * dt;
     }
 
-    // 3. Lógica de tiro (só atira se tiver um alvo e o cooldown estiver zerado)
+    // Lógica de tiro (só atira se tiver um alvo e o cooldown estiver zerado)
     timer -= dt;
     if (shooting && currentTarget != nullptr && timer <= 0.f)
     {
         shooting->fire(currentTarget, *this, enemies);
-        timer = cooldown; // Reseta o cooldown
+        timer = cooldown; 
     }
 }
 
@@ -56,6 +65,9 @@ Enemy* NearestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self
     Hitbox rs = self.rangeHitbox();
     for (auto* e : enemies) {
         if (!e->alive || !rs.intersects(e->hitbox)) continue;
+        if (e->attribute == EnemyAttribute::FLYING && !self.canTargetFlying) {
+            continue;
+        }
         glm::vec3 d = e->hitbox.center - self.pos;
         float d2 = glm::dot(d,d);
         if (d2 < bestD2) {

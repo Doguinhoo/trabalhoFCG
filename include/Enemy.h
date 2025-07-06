@@ -55,6 +55,9 @@ public:
         if (attribute == EnemyAttribute::FAST)
             currentSpeed *= 1.5f;
         
+        if (attribute == EnemyAttribute::RESISTANT)
+        currentSpeed *= 0.75f; 
+
         if (isSlowed)
             currentSpeed *= 0.7f; // Inimigo fica 70% mais lento
 

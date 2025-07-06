@@ -10,6 +10,7 @@
 struct TowerBlueprint {
     std::string name;
     std::string modelName;
+    bool        canTargetFlying;
     float       cost;
     float       range;
     float       cooldown;
