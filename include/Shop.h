@@ -8,6 +8,8 @@
 #include "TowerBlueprint.h"
 #include "Tower.h"
 
+// Loja das torres
+// Cada compra de uma torre será um ponteiro unique_ptr para fins limpeza de memória 
 class Shop {
 public:
     void registerTower(const TowerBlueprint& bp) {
@@ -31,6 +33,7 @@ public:
         ));
     }
 
+    // melhora a torre baseado no nome da próxima torre
     std::unique_ptr<Tower> upgrade(Tower& oldTower, float& playerMoney) {
         // Encontra o blueprint da torre ATUAL. Se não achar, falha.
         auto it_current = blueprints.find(oldTower.blueprintName);
@@ -65,6 +68,8 @@ public:
             std::move(targeting), std::move(shooting), std::move(passive)
         ));
     }
+
+    // vetor que mostra torres disponíveis
     std::vector<std::string> availableTowers() const {
         std::vector<std::string> out;
         out.reserve(blueprints.size());
@@ -76,6 +81,7 @@ public:
         return out;
     }
 
+    // Pega o nome do blueprint
     const TowerBlueprint* getBlueprint(const std::string& name) const
     {
         auto it = blueprints.find(name);

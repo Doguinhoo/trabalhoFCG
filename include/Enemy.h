@@ -5,10 +5,12 @@
 #include <limits>
 #include "Path.h"
 
+// Hitbox do inimigo é uma esfera
 struct Hitbox {
     glm::vec3 center;
     float     radius;
 
+    // 
     bool intersects(const Hitbox& o) const {
         float r = radius + o.radius;
         glm::vec3 d = center - o.center;
@@ -16,17 +18,21 @@ struct Hitbox {
     }
 };
 
+// Atributo adicional
 enum class EnemyAttribute {
     FAST,
     FLYING,
     RESISTANT
 };
 
+// Movimento
 struct IMovement {
     virtual ~IMovement() = default;
     virtual void move(class Enemy& e, float dt) = 0;
 };
 
+// CLASSE INIMIGO
+// informações de cada inimigo
 class Enemy {
 public:
     Hitbox                     hitbox;
@@ -65,9 +71,10 @@ public:
         return currentSpeed;
     }
 
-    // ATUALIZE O MÉTODO update() para controlar o tempo da lentidão
+    // Update da torre na movimentação
     void update(float dt) {
-        if (!alive) return;
+        if (!alive) 
+            return;
         
         if (isSlowed) {
             slowTimer -= dt;
@@ -76,21 +83,28 @@ public:
             }
         }
 
-        if (movement) movement->move(*this, dt);
+        if (movement) 
+            movement->move(*this, dt);
     }
     
+    // Aplicar slow no movimento
     void applySlow(float duration) {
         isSlowed = true;
         slowTimer = duration;
     }
-    
+
+    // Aplicar dano no inimigo
     void applyDamage(float dmg) {
-        if (attribute == EnemyAttribute::RESISTANT) dmg *= 0.5f;
+        if (attribute == EnemyAttribute::RESISTANT) 
+            dmg *= 0.5f;
+
         health -= dmg;
-        if (health <= 0.0f) alive = false;
+        if (health <= 0.0f) 
+            alive = false;
     }
 };
 
+// Struct pra definir o caminho
 struct BezierMovement : IMovement {
     std::shared_ptr<Path> caminho;
 

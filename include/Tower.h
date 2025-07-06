@@ -50,17 +50,19 @@ public:
     std::unique_ptr<IShooting>  shooting;
     std::unique_ptr<IPassiveAbility> passiveAbility;
 
+    // Construtor
     Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
           std::unique_ptr<ITargeting> t,
           std::unique_ptr<IShooting>  s,
           std::unique_ptr<IPassiveAbility> pa);
 
+    // Funções
     Hitbox rangeHitbox() const;
     void update(float dt, const std::vector<Enemy*>& enemies);
     void updateEndOfRound(float& playerMoney);
 };
 
-// Declarações de estratégias concretas (implementações em Tower.cpp)
+// Declarações de estratégias  (implementações em Tower.cpp)
 struct NearestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
 struct WeakestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
 struct StrongestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};

@@ -4,6 +4,7 @@
 #include <memory>
 #include "Enemy.h"
 
+// Header das funções 
 class EnemyManager {
 public:
     EnemyManager() = default;

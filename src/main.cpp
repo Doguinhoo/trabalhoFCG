@@ -817,7 +817,7 @@ int main(int argc, char* argv[])
             float b = -t;
             float r = t * g_ScreenRatio;
             float l = -r;
-            projection = Matrix_Orthographic(l, r, b, t, -nearplane, -farplane); // Os planos são positivos aqui
+            projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane); // Os planos são positivos aqui
         }
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
         g_view_matrix = view;
@@ -868,17 +868,16 @@ int main(int argc, char* argv[])
             glm::vec3 tangent = glm::normalize(g_enemyPath->getPoint(t + 0.01f) - position);
             float path_angle = atan2(tangent.x, tangent.z);
 
-            // Adiciona um pouco de aleatoriedade para um visual mais natural
-            float random_rotation = 6.28f; // Rotação aleatória
-            float random_offset_x = 0.5f; // Pequeno desvio lateral
-            float random_offset_z = 0.5f;
+            float rotation = 6.28f; 
+            float offset_x = 0.5f;
+            float offset_z = 0.5f;
 
-            position.x += random_offset_x;
-            position.z += random_offset_z;
+            position.x += offset_x;
+            position.z += offset_z;
 
             // Cria a matriz 'model' para este carimbo específico
             model = Matrix_Translate(position.x, position.y - 0.3f, position.z)
-                * Matrix_Rotate_Y(path_angle + random_rotation)
+                * Matrix_Rotate_Y(path_angle + rotation)
                 * Matrix_Scale(stamp_size, stamp_size, stamp_size);
                 
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
@@ -1003,17 +1002,29 @@ int main(int argc, char* argv[])
 
         auto enemy_pointers = g_enemyManager.getEnemyPointers();
 
-
+        glUniform1i(g_object_id_uniform, BUNNY);
         // Percorre a lista de inimigos e desenha cada um
-        for (const auto* enemy : enemy_pointers)
+        for (const auto* enemy : g_enemyManager.getEnemyPointers())
         {
-            //  Cria a matriz para posicionar o inimigo no mundo
-            model = Matrix_Translate(enemy->hitbox.center.x, enemy->hitbox.center.y, enemy->hitbox.center.z)
-                * Matrix_Scale(enemy->hitbox.radius, enemy->hitbox.radius, enemy->hitbox.radius); 
-            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            // --- LÓGICA DE ANIMAÇÃO DE FLUTUAÇÃO (BOBBING) ---
+            float time = (float)glfwGetTime();
 
-            //   desenha o modelo do inimigo (Usando o coelho pra testar)
-            DrawVirtualObject("the_bunny");
+            // Parâmetros da animação (você pode ajustar para mudar o efeito)
+            float bobbing_speed = 4.0f;  // Quão rápido o inimigo oscila para cima e para baixo
+            float bobbing_height = 0.1f; // Quão alto o inimigo sobe e desce
+
+            // Calcula o deslocamento vertical usando a função seno
+            float y_offset = sin(time * bobbing_speed) * bobbing_height;
+
+            // Posição base do inimigo
+            glm::vec3 enemy_pos = enemy->hitbox.center;
+
+            // Cria a matriz 'model' com a posição base + o deslocamento da animação
+            model = Matrix_Translate(enemy_pos.x, enemy_pos.y + y_offset, enemy_pos.z)
+                  * Matrix_Scale(enemy->hitbox.radius, enemy->hitbox.radius, enemy->hitbox.radius);
+
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            DrawVirtualObject("the_bunny"); // ATENÇÃO: Use o nome real do seu modelo de inimigo
         }
 
         // desenha o range da torre
@@ -1051,6 +1062,7 @@ int main(int argc, char* argv[])
             TextRendering_PrintString(window, buffer, -0.4f, 0.0f);
         }
 
+        // selecionamento da torre
         if (g_selectedTower)
         {
             float text_y = -0.40f;

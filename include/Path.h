@@ -6,9 +6,11 @@
 #include <utility>
 #include <memory>
 
+// Header dos caminhos
+// Inimigos percorrem uma curva bezier
 class Path {
 public:
-    // O construtor recebe os pontos de controle e cria sua CurvaBezier internamente
+    // O construtor recebe os pontos de controle e cria a CurvaBezier internamente
     Path(const std::vector<glm::vec4>& control_points)
         : curva_interna(const_cast<glm::vec4*>(control_points.data()), control_points.size()) {}
 
