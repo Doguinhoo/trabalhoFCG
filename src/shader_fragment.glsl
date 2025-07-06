@@ -28,10 +28,8 @@ uniform mat4 projection;
 #define MORTAR_TOWER 6
 #define SKYBOX 7
 #define RANGE_INDICATOR 8
-#define CANNON_ICON 10
-#define FARM_ICON 11
-#define ROCKET_ICON 12
-#define MORTAR_ICON 13
+#define SLOW_TOWER 9
+
 
 uniform int object_id;
 
@@ -48,9 +46,6 @@ uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
-uniform sampler2D TextureImage8;
-uniform sampler2D TextureImage9;
-uniform sampler2D TextureImage10;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -138,7 +133,7 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER)
+    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER || object_id == SLOW_TOWER)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -146,8 +141,6 @@ void main()
     }
 
 
-
-    // ETAPA 2: CALCULAR A COR FINAL COM BASE NO OBJETO
     if ( object_id == SPHERE )
     {
         // Esfera usa a mistura de dia/noite com as texturas 0 e 1
@@ -190,26 +183,10 @@ void main()
 
         color = vec4(0.1, 0.5, 1.0, 0.2);
     }
-    else if (object_id == CANNON_ICON)
+    else if (object_id == SLOW_TOWER)
     {
-        // Usa a textura do ícone do canhão.
-        // O número da TextureImageX deve corresponder à ORDEM de carregamento no C++
-        color = texture(TextureImage7, texcoords); // Assumindo que o ícone do canhão é a 8ª imagem (índice 7)
-    }
-    else if (object_id == FARM_ICON)
-    {
-        // Usa a textura do ícone da farm.
-        color = texture(TextureImage8, texcoords); // Assumindo que é a 9ª imagem (índice 8)
-    }
-    else if (object_id == ROCKET_ICON)
-    {
-        // Usa a textura do ícone do foguete.
-        color = texture(TextureImage9, texcoords); // Assumindo que é a 10ª imagem (índice 9)
-    }
-    else if (object_id == MORTAR_ICON)
-    {
-        // Usa a textura do ícone do morteiro.
-        color = texture(TextureImage10, texcoords); // Assumindo que é a 11ª imagem (índice 10)
+        vec3 kd_rocket = texture(TextureImage7, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
     }
     else // objetos (BUNNY, PLANE)
     {

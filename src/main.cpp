@@ -355,7 +355,7 @@ void SetupGame()
     rocket_bp.cost = 175;
     rocket_bp.range = 12.0f;
     rocket_bp.cooldown = 3.0f;
-    rocket_bp.targetingFactory = makeStrongest;
+    rocket_bp.targetingFactory = makeFirst;
     rocket_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
     rocket_bp.passiveFactory = nullptr; 
     g_shop.registerTower(rocket_bp);
@@ -367,7 +367,7 @@ void SetupGame()
     mortar_bp.cost = 250;
     mortar_bp.range = 18.0f;
     mortar_bp.cooldown = 5.0f;
-    mortar_bp.targetingFactory = makeNearest;
+    mortar_bp.targetingFactory = makeFirst;
     mortar_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
     mortar_bp.passiveFactory = nullptr; 
     g_shop.registerTower(mortar_bp);
@@ -383,6 +383,18 @@ void SetupGame()
     farm_bp.shootingFactory = nullptr;  
     farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
     g_shop.registerTower(farm_bp);
+
+        // --- NOVA TORRE DE GELO (SUPORTE) ---
+    TowerBlueprint ice_tower_bp;
+    ice_tower_bp.name = "SlowTower";
+    ice_tower_bp.modelName = "the_slow_tower"; 
+    ice_tower_bp.cost = 50;
+    ice_tower_bp.range = 7.0f;
+    ice_tower_bp.cooldown = 2.5f;
+    ice_tower_bp.targetingFactory = makeFirst;
+    ice_tower_bp.shootingFactory = [](){ return std::unique_ptr<IceShot>(new IceShot(2.0f)); };
+    ice_tower_bp.passiveFactory = nullptr;
+    g_shop.registerTower(ice_tower_bp);
 
     printf("Setup do jogo concluído!\n");
 }
@@ -538,10 +550,8 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/cannon_tower.jpg");                 // TextureImage4
     LoadTextureImage("../../data/mortar_tower.jpg");                 // TextureImage5
     LoadTextureImage("../../data/ceu.jpg");                          // TextureImage6
-    LoadTextureImage("../../data/cannon_tower_icon.jpg");            // TexturaImage7
-    LoadTextureImage("../../data/farm_icon.jpg");                    // TexturaImage8
-    LoadTextureImage("../../data/rocket_tower_icon.jpg");            // TexturaImage9
-    LoadTextureImage("../../data/mortar_tower_icon.png");            // TexturaImage10
+    LoadTextureImage("../../data/slow_tower.jpg");                   // TexturaImage7
+
 
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
@@ -572,6 +582,10 @@ int main(int argc, char* argv[])
     ObjModel mortarmodel("../../data/mortar_tower.obj");
     ComputeNormals(&mortarmodel);
     BuildTrianglesAndAddToVirtualScene(&mortarmodel);
+
+    ObjModel slowmodel("../../data/slow_tower.obj");
+    ComputeNormals(&slowmodel);
+    BuildTrianglesAndAddToVirtualScene(&slowmodel);
 
     if ( argc > 1 )
     {
@@ -741,10 +755,7 @@ int main(int argc, char* argv[])
         #define MORTAR 6
         #define SKYBOX 7
         #define RANGE_INDICATOR 8
-        #define CANNON_ICON 9
-        #define FARM_ICON 10
-        #define ROCKET_ICON 11
-        #define MORTAR_ICON 12
+        #define SLOW 9
 
 
         glDepthFunc(GL_LEQUAL); 
@@ -839,12 +850,17 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, MORTAR);
         DrawVirtualObject("the_mortar_tower");
 
+        model = Matrix_Translate(10.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SLOW);
+        DrawVirtualObject("the_slow_tower");
+
         // Loop que desenha torre ao comprar
         for (const auto& tower : g_towers)
         {
             // Pega a posição da torre
-            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z)
-                    * Matrix_Rotate_Y(tower->currentYRotation); // <-- A MÁGICA ACONTECE AQUI
+            model = Matrix_Translate(tower->pos.x, 0, tower->pos.z)
+                    * Matrix_Rotate_Y(tower->currentYRotation); 
                    
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
@@ -855,6 +871,10 @@ int main(int argc, char* argv[])
                 glUniform1i(g_object_id_uniform, FARM);
             } else if (tower->blueprintName == "RocketTower") {
                 glUniform1i(g_object_id_uniform, ROCKET);
+            } else if (tower->blueprintName == "MortarTower") {
+                glUniform1i(g_object_id_uniform, MORTAR);
+            } else if (tower->blueprintName == "SlowTower") {
+                glUniform1i(g_object_id_uniform, SLOW);
             } 
 
             // Desenha o modelo
@@ -1131,9 +1151,6 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage7"), 7);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage8"), 8);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage9"), 9);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage10"), 10);
     glUseProgram(0);
 }
 
@@ -1885,6 +1902,35 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         }
     }
 
+    if (key == GLFW_KEY_4 && action == GLFW_PRESS)
+    {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("MortarTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_5 && action == GLFW_PRESS)
+    {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("SlowTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
    // Pressionar 'V' para vender
     if (key == GLFW_KEY_V && action == GLFW_PRESS && g_selectedTower)
     {

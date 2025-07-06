@@ -197,6 +197,16 @@ void SplashDamageShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>& al
     }
 }
 
+void IceShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>&) {
+    if (target) {
+        target->applySlow(slowDuration);
+    }
+}
+
+std::string IceShot::getDamageInfo() const {
+    return "Lentidao";
+}
+
 std::string ProjectileShot::getDamageInfo() const {
     return std::to_string((int)damage);
 }

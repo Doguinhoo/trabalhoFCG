@@ -35,6 +35,8 @@ public:
     float                      baseSpeed;
     EnemyAttribute             attribute;
     bool                       alive = true;
+    bool                       isSlowed = false; 
+    float                      slowTimer = 0.0f;   
     std::unique_ptr<IMovement> movement;
     float                      distanceTraveled = 0.0f;
     float                      reward;
@@ -49,15 +51,35 @@ public:
         movement(std::move(mv)) {}
 
     float speed() const {
-        if (attribute == EnemyAttribute::FAST) return baseSpeed * 1.5f;
-        return baseSpeed;
+        float currentSpeed = baseSpeed;
+        if (attribute == EnemyAttribute::FAST)
+            currentSpeed *= 1.5f;
+        
+        if (isSlowed)
+            currentSpeed *= 0.7f; // Inimigo fica 70% mais lento
+
+        return currentSpeed;
     }
 
+    // ATUALIZE O MÉTODO update() para controlar o tempo da lentidão
     void update(float dt) {
         if (!alive) return;
+        
+        if (isSlowed) {
+            slowTimer -= dt;
+            if (slowTimer <= 0.0f) {
+                isSlowed = false;
+            }
+        }
+
         if (movement) movement->move(*this, dt);
     }
-
+    
+    void applySlow(float duration) {
+        isSlowed = true;
+        slowTimer = duration;
+    }
+    
     void applyDamage(float dmg) {
         if (attribute == EnemyAttribute::RESISTANT) dmg *= 0.5f;
         health -= dmg;

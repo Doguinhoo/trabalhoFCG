@@ -94,9 +94,17 @@ struct SplashDamageShot : IShooting {
     std::string getDamageInfo() const override;
 };
 
+struct IceShot : IShooting {
+    float slowDuration;
+    IceShot(float duration) : slowDuration(duration) {}
+    void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
+};
+
 struct GenerateIncome : IPassiveAbility {
     int incomePerRound;
     GenerateIncome(int income) : incomePerRound(income) {}
     void onRoundEnd(Tower&, float&) override;
     std::string getInfo() const override;
 };
+
