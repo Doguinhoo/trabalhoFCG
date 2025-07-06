@@ -384,7 +384,7 @@ void SetupGame()
     farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
     g_shop.registerTower(farm_bp);
 
-        // --- NOVA TORRE DE GELO (SUPORTE) ---
+    // --- NOVA TORRE DE GELO ---
     TowerBlueprint ice_tower_bp;
     ice_tower_bp.name = "SlowTower";
     ice_tower_bp.modelName = "the_slow_tower"; 
@@ -448,8 +448,8 @@ void SellSelectedTower()
         g_towers.end()
     );
 
-    // Devolve 75% do custo da torre para o jogador (exemplo)
-    const auto& bp = g_shop.getBlueprint(g_selectedTower->blueprintName); // Requer um método getBlueprint na Shop
+    // Devolve 75% do custo da torre para o jogador 
+    const auto& bp = g_shop.getBlueprint(g_selectedTower->blueprintName);
     if (bp) {
         g_playerMoney += bp->cost * 0.75f;
     }
@@ -859,13 +859,13 @@ int main(int argc, char* argv[])
         for (const auto& tower : g_towers)
         {
             // Pega a posição da torre
-            model = Matrix_Translate(tower->pos.x, 0, tower->pos.z)
+            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z)
                     * Matrix_Rotate_Y(tower->currentYRotation); 
                    
             glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
 
             // Define o ID para o shader saber como colorir/texturizar
-            if (tower->blueprintName.find("CannonTower_V1") != std::string::npos) {
+            if (tower->blueprintName.find("CannonTower_V1") != std::string::npos || tower->blueprintName.find("CannonTower_V2") != std::string::npos) {
                 glUniform1i(g_object_id_uniform, CANNON);
             } else if (tower->blueprintName == "Farm") {
                 glUniform1i(g_object_id_uniform, FARM);
@@ -1957,6 +1957,25 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             g_selectedTower->targetingModeIndex = nextIndex;
 
             printf("Novo modo de foco da torre: %s\n", g_selectedTower->targeting->getModeName().c_str());
+        }
+    }
+    if (key == GLFW_KEY_U && action == GLFW_PRESS)
+    {
+        printf("Tentando upgrade da torre '%s'...\n", g_selectedTower->blueprintName.c_str());
+
+        // encontrar o unique_ptr correto no vetor g_towers
+        for (auto& tower_ptr : g_towers) {
+            if (tower_ptr.get() == g_selectedTower) {
+                auto upgraded_tower = g_shop.upgrade(*tower_ptr, g_playerMoney);
+                if (upgraded_tower) {
+                    printf("Upgrade bem-sucedido!\n");
+                    g_selectedTower = upgraded_tower.get();
+                    tower_ptr = std::move(upgraded_tower);
+                } else {
+                    printf("Upgrade falhou! (Sem upgrade disponivel ou dinheiro insuficiente)\n");
+                }
+                break; // Sai do loop 'for' pois já encontramos a torre
+            }
         }
     }
 
