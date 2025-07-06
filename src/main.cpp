@@ -183,7 +183,6 @@ int main(int argc, char* argv[]) {
     const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 Ka = glm::vec3(0.01f, 0.01f, 0.01f);
-    const glm::vec3 Kd = glm::vec3(0.8f, 0.8f, 0.8f);
     const glm::vec3 Ks = glm::vec3(0.8f, 0.8f, 0.8f);
     const float q = 10;
     
@@ -196,7 +195,7 @@ int main(int argc, char* argv[]) {
         sphereShape,
         "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
         textureImages,
-        Ka, Kd, Ks, q);
+        Ka, Ks, q);
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
@@ -205,7 +204,7 @@ int main(int argc, char* argv[]) {
         bunnyShape,
         "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
         textureImages,
-        Ka, Kd, Ks, q);
+        Ka, Ks, q);
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
@@ -214,7 +213,7 @@ int main(int argc, char* argv[]) {
         planeShape,
         g_plane_gpuProgram,
         textureImages,
-        Ka, Kd, Ks, q);
+        Ka, Ks, q);
 
     ObjModel *extraModel;
     Shape *extraShape;
@@ -225,7 +224,7 @@ int main(int argc, char* argv[]) {
         extraShape = new Shape(*extraModel, argv[2]);
         extraObject = new SceneObject(
             *extraShape, argv[3], argv[4], textureImages,
-            Ka, Kd, Ks, q);
+            Ka, Ks, q);
     }
 
     // Inicializamos o código para renderização de texto.

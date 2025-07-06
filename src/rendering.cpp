@@ -244,11 +244,11 @@ void Shape::draw() {
 SceneObject::SceneObject(Shape &shapeObject,
     const char *vertex_shader_file_name, const char *fragment_shader_file_name,
     std::vector<GLint> textureImages,
-    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+    glm::vec3 Ka, glm::vec3 Ks, float q
 ) :
     shapeObject(shapeObject),
     textureImages(textureImages),
-    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
+    Ka(Ka), Ks(Ks), q(q)
 {
     this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
 }
@@ -256,11 +256,11 @@ SceneObject::SceneObject(Shape &shapeObject,
 SceneObject::SceneObject(Shape &shapeObject,
     GLuint vertex_shader_id, GLuint fragment_shader_id,
     std::vector<GLint> textureImages,
-    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+    glm::vec3 Ka, glm::vec3 Ks, float q
 ) :
     shapeObject(shapeObject),
     textureImages(textureImages),
-    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
+    Ka(Ka), Ks(Ks), q(q)
 {
     this->gpuProgram = CreateGpuProgram(vertex_shader_id, fragment_shader_id);
 }
@@ -268,12 +268,12 @@ SceneObject::SceneObject(Shape &shapeObject,
 SceneObject::SceneObject(Shape &shapeObject,
     GLuint gpuProgram,
     std::vector<GLint> textureImages,
-    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+    glm::vec3 Ka, glm::vec3 Ks, float q
 ) :
     shapeObject(shapeObject),
     gpuProgram(gpuProgram),
     textureImages(textureImages),
-    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
+    Ka(Ka), Ks(Ks), q(q)
 {}
 
 void SceneObject::draw(
@@ -302,7 +302,6 @@ void SceneObject::draw(
     GLuint light_color_uniform = glGetUniformLocation(this->gpuProgram, "light_color");
     GLuint ambient_color_uniform = glGetUniformLocation(this->gpuProgram, "ambient_color");
     GLuint Ka_uniform = glGetUniformLocation(this->gpuProgram, "Ka");
-    GLuint Kd_uniform = glGetUniformLocation(this->gpuProgram, "Kd");
     GLuint Ks_uniform = glGetUniformLocation(this->gpuProgram, "Ks");
     GLuint q_uniform = glGetUniformLocation(this->gpuProgram, "q");
  
@@ -310,7 +309,6 @@ void SceneObject::draw(
     glUniform3f(light_color_uniform, light_color.x, light_color.y, light_color.z);
     glUniform3f(ambient_color_uniform, ambient_color.x, ambient_color.y, ambient_color.z);
     glUniform3f(Ka_uniform, this->Ka.x, this->Ka.y, this->Ka.z);
-    glUniform3f(Kd_uniform, this->Kd.x, this->Kd.y, this->Kd.z);
     glUniform3f(Ks_uniform, this->Ks.x, this->Ks.y, this->Ks.z);
     glUniform1f(q_uniform, this->q);
 

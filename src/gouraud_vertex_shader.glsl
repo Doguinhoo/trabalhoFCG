@@ -15,7 +15,6 @@ uniform vec4 light_source;
 uniform vec3 light_color;
 uniform vec3 ambient_color;
 uniform vec3 Ka;
-uniform vec3 Kd;
 uniform vec3 Ks;
 uniform float q;
 
@@ -56,7 +55,7 @@ void main() {
     #define n normal
     // Normal do vértice atual no sistema de coordenadas global (World).
     // Veja slides 123-151 do documento Aula_07_Transformacoes_Geometricas_3D.pdf.
-    n = inverse(transpose(model)) * normal_coefficients;
+    n = normalize(inverse(transpose(model)) * normal_coefficients);
     n.w = 0.0;
     
     // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
@@ -72,7 +71,7 @@ void main() {
     }
 
     // Termo difuso utilizando a lei dos cossenos de Lambert
-    vec3 lambert_diffuse_term = Kd*light_color*max(0, dot(n, l));
+    vec3 lambert_diffuse_term = light_color*max(0, dot(n, l));
 
     // Termo especular utilizando o modelo de iluminação de Phong
     vec4 camera_position = inverse(view) * ORIGIN;
