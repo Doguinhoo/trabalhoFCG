@@ -178,21 +178,43 @@ int main(int argc, char* argv[]) {
 
     GLint textureImagesArray[] = {0, 1};
     std::vector<GLint> textureImages(textureImagesArray, textureImagesArray + 2);
+
+    const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
+    const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
+    const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
+    const glm::vec3 Ka = glm::vec3(0.01f, 0.01f, 0.01f);
+    const glm::vec3 Kd = glm::vec3(0.8f, 0.8f, 0.8f);
+    const glm::vec3 Ks = glm::vec3(0.8f, 0.8f, 0.8f);
+    const float q = 10;
+    
+
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
     ComputeNormals(&sphereModel);
     Shape sphereShape(sphereModel, "the_sphere");
-    SceneObject sphereObject(sphereShape, g_sphere_gpuProgram, textureImages);
+    SceneObject sphereObject(
+        sphereShape,
+        "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
+        textureImages,
+        Ka, Kd, Ks, q);
 
     ObjModel bunnyModel("../../data/bunny.obj");
     ComputeNormals(&bunnyModel);
     Shape bunnyShape(bunnyModel, "the_bunny");
-    SceneObject bunnyObject(bunnyShape, g_bunny_gpuProgram, textureImages);
+    SceneObject bunnyObject(
+        bunnyShape,
+        "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
+        textureImages,
+        Ka, Kd, Ks, q);
 
     ObjModel planeModel("../../data/plane.obj");
     ComputeNormals(&planeModel);
     Shape planeShape(planeModel, "the_plane");
-    SceneObject planeObject(planeShape, g_plane_gpuProgram, textureImages);
+    SceneObject planeObject(
+        planeShape,
+        g_plane_gpuProgram,
+        textureImages,
+        Ka, Kd, Ks, q);
 
     ObjModel *extraModel;
     Shape *extraShape;
@@ -201,7 +223,9 @@ int main(int argc, char* argv[]) {
     if (argc >= 5) {
         extraModel = new ObjModel(argv[1]);
         extraShape = new Shape(*extraModel, argv[2]);
-        extraObject = new SceneObject(*extraShape, argv[3], argv[4], textureImages);
+        extraObject = new SceneObject(
+            *extraShape, argv[3], argv[4], textureImages,
+            Ka, Kd, Ks, q);
     }
 
     // Inicializamos o código para renderização de texto.
@@ -298,16 +322,22 @@ int main(int argc, char* argv[]) {
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-        sphereObject.draw(model, view, projection);
+        sphereObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color);
 
         // Desenhamos o modelo do coelho
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        bunnyObject.draw(model, view, projection);
+        bunnyObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color);
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
-        planeObject.draw(model, view, projection);
+        planeObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color);
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do

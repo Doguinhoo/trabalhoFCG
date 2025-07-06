@@ -241,27 +241,45 @@ void Shape::draw() {
 }
 
 
-SceneObject::SceneObject(Shape &shapeObject, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages) :
+SceneObject::SceneObject(Shape &shapeObject,
+    const char *vertex_shader_file_name, const char *fragment_shader_file_name,
+    std::vector<GLint> textureImages,
+    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+) :
     shapeObject(shapeObject),
-    textureImages(textureImages)
+    textureImages(textureImages),
+    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
 {
     this->gpuProgram = CreateGpuProgramFromFiles(vertex_shader_file_name, fragment_shader_file_name);
 }
 
-SceneObject::SceneObject(Shape &shapeObject, GLuint vertex_shader_id, GLuint fragment_shader_id, std::vector<GLint> textureImages) :
+SceneObject::SceneObject(Shape &shapeObject,
+    GLuint vertex_shader_id, GLuint fragment_shader_id,
+    std::vector<GLint> textureImages,
+    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+) :
     shapeObject(shapeObject),
-    textureImages(textureImages)
+    textureImages(textureImages),
+    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
 {
     this->gpuProgram = CreateGpuProgram(vertex_shader_id, fragment_shader_id);
 }
 
-SceneObject::SceneObject(Shape &shapeObject, GLuint gpuProgram, std::vector<GLint> textureImages) :
+SceneObject::SceneObject(Shape &shapeObject,
+    GLuint gpuProgram,
+    std::vector<GLint> textureImages,
+    glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q
+) :
     shapeObject(shapeObject),
     gpuProgram(gpuProgram),
-    textureImages(textureImages)
+    textureImages(textureImages),
+    Ka(Ka), Kd(Kd), Ks(Ks), q(q)
 {}
 
-void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection) {
+void SceneObject::draw(
+    glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection,
+    glm::vec4 light_source, glm::vec3 light_color, glm::vec3 ambient_color) 
+{
     glUseProgram(this->gpuProgram);
 
     GLuint model_uniform = glGetUniformLocation(this->gpuProgram, "model"); // Variável da matriz "model"
@@ -279,7 +297,23 @@ void SceneObject::draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projecti
     glm::vec3 bbox_max = this->shapeObject.get_bbox_max();
     glUniform4f(bbox_min_uniform, bbox_min.x, bbox_min.y, bbox_min.z, 1.0f);
     glUniform4f(bbox_max_uniform, bbox_max.x, bbox_max.y, bbox_max.z, 1.0f);
+
+    GLuint light_source_uniform = glGetUniformLocation(this->gpuProgram, "light_source");
+    GLuint light_color_uniform = glGetUniformLocation(this->gpuProgram, "light_color");
+    GLuint ambient_color_uniform = glGetUniformLocation(this->gpuProgram, "ambient_color");
+    GLuint Ka_uniform = glGetUniformLocation(this->gpuProgram, "Ka");
+    GLuint Kd_uniform = glGetUniformLocation(this->gpuProgram, "Kd");
+    GLuint Ks_uniform = glGetUniformLocation(this->gpuProgram, "Ks");
+    GLuint q_uniform = glGetUniformLocation(this->gpuProgram, "q");
  
+    glUniform4f(light_source_uniform, light_source.x, light_source.y, light_source.z, light_source.w);
+    glUniform3f(light_color_uniform, light_color.x, light_color.y, light_color.z);
+    glUniform3f(ambient_color_uniform, ambient_color.x, ambient_color.y, ambient_color.z);
+    glUniform3f(Ka_uniform, this->Ka.x, this->Ka.y, this->Ka.z);
+    glUniform3f(Kd_uniform, this->Kd.x, this->Kd.y, this->Kd.z);
+    glUniform3f(Ks_uniform, this->Ks.x, this->Ks.y, this->Ks.z);
+    glUniform1f(q_uniform, this->q);
+
     GLuint texture_images_uniform = glGetUniformLocation(this->gpuProgram, "TextureImages"); // Variável da matriz "model" 
     glUniform1iv(texture_images_uniform, std::min(MAX_TEXTURES, this->textureImages.size()), this->textureImages.data());
 

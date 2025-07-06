@@ -46,12 +46,30 @@ class SceneObject {
     Shape& shapeObject;
     GLuint gpuProgram; // Programa de GPU usado para renderizar o objeto
     std::vector<GLint> textureImages;
+    glm::vec3 Ka;
+    glm::vec3 Kd;
+    glm::vec3 Ks;
+    float q;
 
     public:
-        SceneObject(Shape& shapeObject, const char *vertex_shader_file_name, const char *fragment_shader_file_name, std::vector<GLint> textureImages);
-        SceneObject(Shape& shapeObject, GLuint vertex_shader_id, GLuint fragment_shader_id, std::vector<GLint> textureImages);
-        SceneObject(Shape& shapeObject, GLuint gpuProgram, std::vector<GLint> textureImages);
-        void draw(glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection);
+        SceneObject(
+            Shape& shapeObject,
+            const char *vertex_shader_file_name, const char *fragment_shader_file_name,
+            std::vector<GLint> textureImages,
+            glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q);
+        SceneObject(
+            Shape& shapeObject, 
+            GLuint vertex_shader_id, GLuint fragment_shader_id,
+            std::vector<GLint> textureImages,
+            glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q);
+        SceneObject(
+            Shape& shapeObject, 
+            GLuint gpuProgram,
+            std::vector<GLint> textureImages,
+            glm::vec3 Ka, glm::vec3 Kd, glm::vec3 Ks, float q);
+        void draw(
+            glm::mat4x4 model, glm::mat4x4 view, glm::mat4x4 projection,
+            glm::vec4 light_source, glm::vec3 light_color, glm::vec3 ambient_color);
 };
 
 typedef std::map<std::string, SceneObject> VirtualScene;
