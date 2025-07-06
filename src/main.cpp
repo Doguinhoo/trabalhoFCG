@@ -183,8 +183,8 @@ int main(int argc, char* argv[]) {
     const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 Ka = glm::vec3(0.01f, 0.01f, 0.01f);
-    const glm::vec3 Ks = glm::vec3(0.8f, 0.8f, 0.8f);
-    const float q = 60;
+    const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
+    const float q = 30;
     
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
     Shape sphereShape(sphereModel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
-        "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
+        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
         textureImages,
         Ka, Ks, q);
 
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
     Shape bunnyShape(bunnyModel, "the_bunny");
     SceneObject bunnyObject(
         bunnyShape,
-        "../../src/gouraud_vertex_shader.glsl", "../../src/gouraud_fragment_shader.glsl",
+        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
         textureImages,
         Ka, Ks, q);
 
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
     Shape planeShape(planeModel, "the_plane");
     SceneObject planeObject(
         planeShape,
-        g_plane_gpuProgram,
+        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
         textureImages,
         Ka, Ks, q);
 
@@ -323,20 +323,20 @@ int main(int argc, char* argv[]) {
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         sphereObject.draw(
             model, view, projection,
-            light_source, light_color, ambient_color);
+            camera_position_c, light_color, ambient_color);
 
         // Desenhamos o modelo do coelho
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
         bunnyObject.draw(
             model, view, projection,
-            light_source, light_color, ambient_color);
+            camera_position_c, light_color, ambient_color);
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
         planeObject.draw(
             model, view, projection,
-            light_source, light_color, ambient_color);
+            camera_position_c, light_color, ambient_color);
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do

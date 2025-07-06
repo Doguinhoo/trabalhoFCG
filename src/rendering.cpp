@@ -632,12 +632,10 @@ void LoadShader(const char* filename, GLuint shader_id) {
     glGetShaderInfoLog(shader_id, log_length, &log_length, log);
 
     // Imprime no terminal qualquer erro ou "warning" de compilação
-    if ( log_length != 0 )
-    {
+    if ( log_length != 0 ) {
         std::string  output;
 
-        if ( !compiled_ok )
-        {
+        if ( !compiled_ok ) {
             output += "ERROR: OpenGL compilation of \"";
             output += filename;
             output += "\" failed.\n";
@@ -645,8 +643,7 @@ void LoadShader(const char* filename, GLuint shader_id) {
             output += log;
             output += "== End of compilation log\n";
         }
-        else
-        {
+        else {
             output += "WARNING: OpenGL compilation of \"";
             output += filename;
             output += "\".\n";
