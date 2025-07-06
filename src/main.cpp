@@ -600,6 +600,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/slow_tower.jpg");                   // TexturaImage7
     LoadTextureImage("../../data/portal.jpg");                       // TexturaImage8
     LoadTextureImage("../../data/castle.jpg");                       // TexturaImage9
+    LoadTextureImage("../../data/caminho.jpg");                       // TexturaImage9
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -814,6 +815,7 @@ int main(int argc, char* argv[])
         #define SLOW 9
         #define PORTAL 10
         #define CASTLE 11
+        #define CAMINHO 12
 
         glDepthFunc(GL_LEQUAL); 
         glUseProgram(g_GpuProgramID); 
@@ -825,7 +827,7 @@ int main(int argc, char* argv[])
         glDepthFunc(GL_LESS); 
 
             // Define qual ID e qual textura vamos usar para os "carimbos"
-        glUniform1i(g_object_id_uniform, PLANE);
+        glUniform1i(g_object_id_uniform, CAMINHO);
 
         float path_length = g_enemyPath->getTotalLength();
         float stamp_spacing = 1.5f; // Distância entre cada carimbo de textura
@@ -1146,8 +1148,8 @@ void LoadTextureImage(const char* filename)
     glGenSamplers(1, &sampler_id);
 
     // Veja slides 95-96 do documento Aula_20_Mapeamento_de_Texturas.pdf
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_REPEAT);  // mudado para GL_REPEAT para não usar clamping
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     // Parâmetros de amostragem da textura.
     glSamplerParameteri(sampler_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -1260,6 +1262,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage7"), 7);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage8"), 8);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage9"), 9);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage10"), 10);
     glUseProgram(0);
 }
 

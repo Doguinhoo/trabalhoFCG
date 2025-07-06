@@ -31,6 +31,7 @@ uniform mat4 projection;
 #define SLOW_TOWER 9
 #define PORTAL 10
 #define CASTLE 11
+#define CAMINHO 12
 
 uniform int object_id;
 
@@ -49,6 +50,7 @@ uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
 uniform sampler2D TextureImage8;
 uniform sampler2D TextureImage9;
+uniform sampler2D TextureImage10;
 
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
@@ -137,7 +139,7 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER || object_id == SLOW_TOWER || object_id == PORTAL || object_id == CASTLE)
+    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER || object_id == SLOW_TOWER || object_id == PORTAL || object_id == CASTLE || object_id == CAMINHO)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -151,6 +153,13 @@ void main()
         vec3 kd_dia = texture(TextureImage0, vec2(U,V)).rgb;
         vec3 kd_noite = texture(TextureImage1, vec2(U,V)).rgb;
         color.rgb = kd_dia * (lambert + 0.05) + kd_noite * max(0.0, (1.0 - lambert * 10.0));
+    }
+    else if (object_id == PLANE)
+    {
+
+        vec2 tiled_uv = position_world.xz * 0.2; 
+        vec3 kd_ground = texture(TextureImage0, tiled_uv).rgb;
+        color.rgb = kd_ground * lambert + kd_ground * 0.15;
     }
     else if ( object_id == ROCKET_TOWER )
     {
@@ -203,7 +212,12 @@ void main()
         vec3 kd_rocket = texture(TextureImage9, vec2(U,V)).rgb;
         color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
     }
-    else // objetos (BUNNY, PLANE)
+    else if (object_id == CAMINHO)
+    {
+        vec3 kd_rocket = texture(TextureImage10, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else 
     {
         vec3 kd_default = texture(TextureImage0, vec2(U,V)).rgb;
         color.rgb = kd_default * lambert + kd_default * 0.1;
