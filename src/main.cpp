@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
     Shape sphereShape(sphereModel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
-        g_gouraud_gpu_program_proj_esfer_id,
+        g_phong_gpu_program_proj_esfer_id,
         textureImages,
         Ka, Ks, q);
 
@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
     Shape bunnyShape(bunnyModel, "the_bunny");
     SceneObject bunnyObject(
         bunnyShape,
-        g_gouraud_gpu_program_proj_planar_id,
+        g_phong_gpu_program_proj_planar_id,
         textureImages,
         Ka, Ks, q);
 
@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
     Shape planeShape(planeModel, "the_plane");
     SceneObject planeObject(
         planeShape,
-        g_gouraud_gpu_program_id,
+        g_phong_gpu_program_id,
         textureImages,
         Ka, Ks, q);
 
