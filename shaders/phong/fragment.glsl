@@ -92,8 +92,8 @@ void main() {
 
     // Equações de Iluminação
     vec3 lambert = Kd*light_color*max(0,dot(n,l));
-    vec3 ambient = Ka*ambient_color;
-    vec3 blinn_phong = Ks*light_color*pow(dot(n, h), q);
+    vec3 ambient = Ka*Kd*ambient_color;
+    vec3 blinn_phong = Ks*light_color*pow(max(dot(n, h), 0), q);
 
     color.rgb = lambert + ambient + blinn_phong;
 

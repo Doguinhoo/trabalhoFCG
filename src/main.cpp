@@ -99,15 +99,14 @@ bool g_UsePerspectiveProjection = true;
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
-GLuint g_vertex_shader_id;
+GLuint g_gourad_vertex_shader_id;
+GLuint g_phong_vertex_shader_id;
 
-GLuint g_sphere_fragment_shader_id;
-GLuint g_bunny_fragment_shader_id;
-GLuint g_plane_fragment_shader_id;
+GLuint g_gourad_fragment_shader_id;
+GLuint g_phong_fragment_shader_id;
 
-GLuint g_sphere_gpuProgram;
-GLuint g_bunny_gpuProgram;
-GLuint g_plane_gpuProgram;
+GLuint g_gourad_gpu_program_id;
+GLuint g_phong_gpu_program_id;
 
 int main(int argc, char* argv[]) {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -182,10 +181,9 @@ int main(int argc, char* argv[]) {
     const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
     const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
-    const glm::vec3 Ka = glm::vec3(0.01f, 0.01f, 0.01f);
+    const glm::vec3 Ka = glm::vec3(0.02f, 0.02f, 0.02f);
     const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
     const float q = 30;
-    
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel sphereModel("../../data/sphere.obj");
@@ -193,7 +191,7 @@ int main(int argc, char* argv[]) {
     Shape sphereShape(sphereModel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
-        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
+        g_phong_gpu_program_id,
         textureImages,
         Ka, Ks, q);
 
@@ -202,7 +200,7 @@ int main(int argc, char* argv[]) {
     Shape bunnyShape(bunnyModel, "the_bunny");
     SceneObject bunnyObject(
         bunnyShape,
-        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
+        g_phong_gpu_program_id,
         textureImages,
         Ka, Ks, q);
 
@@ -211,7 +209,7 @@ int main(int argc, char* argv[]) {
     Shape planeShape(planeModel, "the_plane");
     SceneObject planeObject(
         planeShape,
-        "../../src/phong_vertex_shader.glsl", "../../src/phong_fragment_shader.glsl",
+        g_phong_gpu_program_id,
         textureImages,
         Ka, Ks, q);
 
@@ -323,20 +321,20 @@ int main(int argc, char* argv[]) {
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         sphereObject.draw(
             model, view, projection,
-            camera_position_c, light_color, ambient_color);
+            light_source, light_color, ambient_color);
 
         // Desenhamos o modelo do coelho
         model = Matrix_Translate(1.0f,0.0f,0.0f)
               * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
         bunnyObject.draw(
             model, view, projection,
-            camera_position_c, light_color, ambient_color);
+            light_source, light_color, ambient_color);
 
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f);
         planeObject.draw(
             model, view, projection,
-            camera_position_c, light_color, ambient_color);
+            light_source, light_color, ambient_color);
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -380,12 +378,10 @@ void PushMatrix(glm::mat4 M) {
 
 // Função que remove a matriz atualmente no topo da pilha e armazena a mesma na variável M
 void PopMatrix(glm::mat4& M) {
-    if ( g_MatrixStack.empty() )
-    {
+    if ( g_MatrixStack.empty() ) {
         M = Matrix_Identity();
     }
-    else
-    {
+    else {
         M = g_MatrixStack.top();
         g_MatrixStack.pop();
     }
@@ -394,14 +390,14 @@ void PopMatrix(glm::mat4& M) {
 void LoadContext() {
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    g_vertex_shader_id = LoadShader_Vertex("../../src/vertex_shader.glsl");
-    g_sphere_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_sphere.glsl");
-    g_bunny_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_bunny.glsl");
-    g_plane_fragment_shader_id = LoadShader_Fragment("../../src/fragment_shader_plane.glsl");
+    g_gourad_vertex_shader_id = LoadShader_Vertex("../../shaders/gourad/vertex.glsl");
+    g_phong_vertex_shader_id = LoadShader_Vertex("../../shaders/phong/vertex.glsl");
 
-    g_sphere_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_sphere_fragment_shader_id);
-    g_bunny_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_bunny_fragment_shader_id);
-    g_plane_gpuProgram = CreateGpuProgram(g_vertex_shader_id, g_plane_fragment_shader_id);
+    g_gourad_fragment_shader_id = LoadShader_Fragment("../../shaders/gourad/fragment.glsl");
+    g_phong_fragment_shader_id = LoadShader_Fragment("../../shaders/phong/fragment.glsl");
+
+    g_gourad_gpu_program_id = CreateGpuProgram(g_gourad_vertex_shader_id, g_gourad_fragment_shader_id);
+    g_phong_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_id);
 
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);
@@ -409,14 +405,14 @@ void LoadContext() {
 }
 
 void UnloadContext() {
-    glDeleteShader(g_vertex_shader_id);
-    glDeleteShader(g_sphere_fragment_shader_id);
-    glDeleteShader(g_bunny_fragment_shader_id);
-    glDeleteShader(g_plane_fragment_shader_id);
+    glDeleteShader(g_gourad_vertex_shader_id);
+    glDeleteShader(g_phong_vertex_shader_id);
 
-    glDeleteProgram(g_sphere_gpuProgram);
-    glDeleteProgram(g_bunny_gpuProgram);
-    glDeleteProgram(g_plane_gpuProgram);
+    glDeleteShader(g_gourad_fragment_shader_id);
+    glDeleteShader(g_phong_fragment_shader_id);
+
+    glDeleteProgram(g_gourad_gpu_program_id);
+    glDeleteProgram(g_phong_gpu_program_id);
 }
 
 // Definição da função que será chamada sempre que a janela do sistema

@@ -45,12 +45,13 @@ void main() {
     float theta = atan(pv.x, pv.z);
     float phi = asin(pv.y/length(pv));
 
-    float u = (theta + M_PI)/(2*M_PI);
-    float v = (phi + M_PI_2)/M_PI;
+    float U = (theta + M_PI)/(2*M_PI);
+    float V = (phi + M_PI_2)/M_PI;
 
-    vec3 Kd = texture(TextureImages[0], vec2(u, v)).rgb;
+    // Obtemos a refletância difusa a partir da leitura da imagem TextureImages[0]
+    vec3 Kd = texture(TextureImages[0], vec2(U, V)).rgb;
 
-    color.rgb = Kd*lambert + blinn_phong + Ka*ambient_color;
+    color.rgb = Kd*lambert + blinn_phong + Ka*Kd*ambient_color;
 
     // Cor final com correção gamma, considerando monitor sRGB.
     // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
