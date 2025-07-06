@@ -21,10 +21,6 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-// Parâmetros da axis-aligned bounding box (AABB) do modelo
-uniform vec4 bbox_min;
-uniform vec4 bbox_max;
-
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImages[1];
 
@@ -39,17 +35,8 @@ out vec4 color;
 #define M_PI_2 1.57079632679489661923
 
 void main() {
-    vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
-    vec4 pv = position_model - bbox_center;
-
-    float theta = atan(pv.x, pv.z);
-    float phi = asin(pv.y/length(pv));
-
-    float U = (theta + M_PI)/(2*M_PI);
-    float V = (phi + M_PI_2)/M_PI;
-
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImages[0]
-    vec3 Kd = texture(TextureImages[0], vec2(U, V)).rgb;
+    vec3 Kd = texture(TextureImages[0], texcoords).rgb;
 
     color.rgb = Kd*lambert + blinn_phong + Ka*Kd*ambient_color;
 

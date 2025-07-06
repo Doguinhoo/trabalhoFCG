@@ -62,6 +62,7 @@ ObjModel::ObjModel(const char* filename, const char* basepath/*  = NULL */, bool
     printf("OK.\n");
 }
 
+
 void Shape::buildTriangles() {
     GLuint vertex_array_object_id;
     glGenVertexArrays(1, &vertex_array_object_id);
@@ -106,7 +107,7 @@ void Shape::buildTriangles() {
             //printf("tri %d vert %d = (%.2f, %.2f, %.2f)\n", (int)triangle, (int)vertex, vx, vy, vz);
             model_coefficients.push_back(vx); // X
             model_coefficients.push_back(vy); // Y
-            model_coefficients.push_back(vz ); // Z
+            model_coefficients.push_back(vz); // Z
             model_coefficients.push_back(1.0f); // W
 
             bbox_min.x = std::min(bbox_min.x, vx);
@@ -173,7 +174,7 @@ void Shape::buildTriangles() {
         glEnableVertexAttribArray(location);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
-
+    
     if (!texture_coefficients.empty()) {
         GLuint VBO_texture_coefficients_id;
         glGenBuffers(1, &VBO_texture_coefficients_id);

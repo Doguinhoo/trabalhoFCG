@@ -10,13 +10,14 @@ in vec4 normal;
 // Posição do vértice atual no sistema de coordenadas local do modelo.
 in vec4 position_model;
 
-// Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
-in vec2 texcoords;
-
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+
+// Parâmetros da axis-aligned bounding box (AABB) do modelo
+uniform vec4 bbox_min;
+uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImages[1];
@@ -32,6 +33,8 @@ uniform float q;
 out vec4 color;
 
 // Constantes
+#define M_PI   3.14159265358979323846
+#define M_PI_2 1.57079632679489661923
 const vec4 ORIGIN = vec4(0.0, 0.0, 0.0, 1.0);
 
 void main() {
@@ -60,7 +63,15 @@ void main() {
     vec4 h = normalize(v + l);
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImages[0]
-    vec3 Kd = texture(TextureImages[0], texcoords).rgb;
+    vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
+    vec4 pv = position_model - bbox_center;
+
+    float theta = atan(pv.x, pv.z);
+    float phi = asin(pv.y/length(pv)); 
+
+    float U = (theta + M_PI)/(2*M_PI);
+    float V = (phi + M_PI_2)/M_PI;
+    vec3 Kd = texture(TextureImages[0], vec2(U, V)).rgb;
 
     // Equações de Iluminação
     vec3 lambert = Kd*light_color*max(0,dot(n,l));

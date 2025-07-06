@@ -99,14 +99,24 @@ bool g_UsePerspectiveProjection = true;
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
-GLuint g_gourad_vertex_shader_id;
+GLuint g_gouraud_vertex_shader_id;
 GLuint g_phong_vertex_shader_id;
 
-GLuint g_gourad_fragment_shader_id;
-GLuint g_phong_fragment_shader_id;
+GLuint g_gouraud_fragment_shader_id;
+GLuint g_gouraud_fragment_shader_proj_esfer_id;
+GLuint g_gouraud_fragment_shader_proj_planar_id;
 
-GLuint g_gourad_gpu_program_id;
+GLuint g_phong_fragment_shader_id;
+GLuint g_phong_fragment_shader_proj_esfer_id;
+GLuint g_phong_fragment_shader_proj_planar_id;
+
+GLuint g_gouraud_gpu_program_id;
+GLuint g_gouraud_gpu_program_proj_esfer_id;
+GLuint g_gouraud_gpu_program_proj_planar_id;
+
 GLuint g_phong_gpu_program_id;
+GLuint g_phong_gpu_program_proj_esfer_id;
+GLuint g_phong_gpu_program_proj_planar_id;
 
 int main(int argc, char* argv[]) {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -177,10 +187,7 @@ int main(int argc, char* argv[]) {
 
     GLint textureImagesArray[] = {0, 1};
     std::vector<GLint> textureImages(textureImagesArray, textureImagesArray + 2);
-
-    const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
-    const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
-    const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
+ 
     const glm::vec3 Ka = glm::vec3(0.02f, 0.02f, 0.02f);
     const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
     const float q = 30;
@@ -191,7 +198,7 @@ int main(int argc, char* argv[]) {
     Shape sphereShape(sphereModel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
-        g_phong_gpu_program_id,
+        g_gouraud_gpu_program_proj_esfer_id,
         textureImages,
         Ka, Ks, q);
 
@@ -200,7 +207,7 @@ int main(int argc, char* argv[]) {
     Shape bunnyShape(bunnyModel, "the_bunny");
     SceneObject bunnyObject(
         bunnyShape,
-        g_phong_gpu_program_id,
+        g_gouraud_gpu_program_proj_planar_id,
         textureImages,
         Ka, Ks, q);
 
@@ -209,7 +216,7 @@ int main(int argc, char* argv[]) {
     Shape planeShape(planeModel, "the_plane");
     SceneObject planeObject(
         planeShape,
-        g_phong_gpu_program_id,
+        g_gouraud_gpu_program_id,
         textureImages,
         Ka, Ks, q);
 
@@ -282,7 +289,7 @@ int main(int argc, char* argv[]) {
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -10.0f; // Posição do "far plane" 
 
         if (g_UsePerspectiveProjection) {
             // Projeção Perspectiva.
@@ -304,15 +311,9 @@ int main(int argc, char* argv[]) {
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
-        // Enviamos as matrizes "view" e "projection" para a placa de vídeo
-        // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
-        // efetivamente aplicadas em todos os pontos.
-        // glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
-        // glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
-
-        // #define SPHERE 0
-        // #define BUNNY  1
-        // #define PLANE  2
+        const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
+        const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
+        const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f, 0.0f, 0.0f)
@@ -390,14 +391,24 @@ void PopMatrix(glm::mat4& M) {
 void LoadContext() {
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    g_gourad_vertex_shader_id = LoadShader_Vertex("../../shaders/gourad/vertex.glsl");
+    g_gouraud_vertex_shader_id = LoadShader_Vertex("../../shaders/gouraud/vertex.glsl");
     g_phong_vertex_shader_id = LoadShader_Vertex("../../shaders/phong/vertex.glsl");
 
-    g_gourad_fragment_shader_id = LoadShader_Fragment("../../shaders/gourad/fragment.glsl");
-    g_phong_fragment_shader_id = LoadShader_Fragment("../../shaders/phong/fragment.glsl");
+    g_gouraud_fragment_shader_id = LoadShader_Fragment("../../shaders/gouraud/fragment.glsl");
+    g_gouraud_fragment_shader_proj_esfer_id = LoadShader_Fragment("../../shaders/gouraud/fragment_proj_esfer.glsl");
+    g_gouraud_fragment_shader_proj_planar_id = LoadShader_Fragment("../../shaders/gouraud/fragment_proj_planar.glsl");
 
-    g_gourad_gpu_program_id = CreateGpuProgram(g_gourad_vertex_shader_id, g_gourad_fragment_shader_id);
+    g_phong_fragment_shader_id = LoadShader_Fragment("../../shaders/phong/fragment.glsl");
+    g_phong_fragment_shader_proj_esfer_id = LoadShader_Fragment("../../shaders/phong/fragment_proj_esfer.glsl");
+    g_phong_fragment_shader_proj_planar_id = LoadShader_Fragment("../../shaders/phong/fragment_proj_planar.glsl");
+
+    g_gouraud_gpu_program_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_id);
+    g_gouraud_gpu_program_proj_esfer_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_esfer_id);
+    g_gouraud_gpu_program_proj_planar_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_planar_id);
+
     g_phong_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_id);
+    g_phong_gpu_program_proj_esfer_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_esfer_id);
+    g_phong_gpu_program_proj_planar_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_planar_id);
 
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);
@@ -405,14 +416,24 @@ void LoadContext() {
 }
 
 void UnloadContext() {
-    glDeleteShader(g_gourad_vertex_shader_id);
+    glDeleteShader(g_gouraud_vertex_shader_id);
     glDeleteShader(g_phong_vertex_shader_id);
 
-    glDeleteShader(g_gourad_fragment_shader_id);
-    glDeleteShader(g_phong_fragment_shader_id);
+    glDeleteShader(g_gouraud_fragment_shader_id);
+    glDeleteShader(g_gouraud_fragment_shader_proj_esfer_id);
+    glDeleteShader(g_gouraud_fragment_shader_proj_planar_id);
 
-    glDeleteProgram(g_gourad_gpu_program_id);
+    glDeleteShader(g_phong_fragment_shader_id);
+    glDeleteShader(g_phong_fragment_shader_proj_esfer_id);
+    glDeleteShader(g_phong_fragment_shader_proj_planar_id);
+
+    glDeleteProgram(g_gouraud_gpu_program_id);
+    glDeleteProgram(g_gouraud_gpu_program_proj_esfer_id);
+    glDeleteProgram(g_gouraud_gpu_program_proj_planar_id);
+
     glDeleteProgram(g_phong_gpu_program_id);
+    glDeleteProgram(g_phong_gpu_program_proj_esfer_id);
+    glDeleteProgram(g_phong_gpu_program_proj_planar_id);
 }
 
 // Definição da função que será chamada sempre que a janela do sistema
