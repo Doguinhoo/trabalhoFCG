@@ -769,9 +769,13 @@ int main(int argc, char* argv[])
 
         if (g_cameraMode == CameraMode::TOWER_FOV && g_selectedTower != nullptr)
         {
-            // MODO 1: CÂMERA EM TERCEIRA PESSOA
+
             glm::vec3 tower_pos = g_selectedTower->pos;
             float tower_rotation_y = g_selectedTower->currentYRotation;
+
+            // A posição final da câmera é calculada subtraindo o deslocamento que criamos da posição da torre
+            // com 4 unidades para trás e 2 unidades para cima.
+
             glm::vec3 offset = glm::vec3(sin(tower_rotation_y) * 4.0f, -2.0f, cos(tower_rotation_y) * 4.0f);
             camera_position_c = glm::vec4(tower_pos - offset, 1.0f);
             glm::vec4 camera_lookat_l = glm::vec4(tower_pos, 1.0f);
