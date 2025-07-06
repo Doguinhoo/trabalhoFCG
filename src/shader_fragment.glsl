@@ -29,7 +29,8 @@ uniform mat4 projection;
 #define SKYBOX 7
 #define RANGE_INDICATOR 8
 #define SLOW_TOWER 9
-
+#define PORTAL 10
+#define CASTLE 11
 
 uniform int object_id;
 
@@ -46,6 +47,9 @@ uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
 uniform sampler2D TextureImage7;
+uniform sampler2D TextureImage8;
+uniform sampler2D TextureImage9;
+
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -133,7 +137,7 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER || object_id == SLOW_TOWER)
+    else if ( object_id == PLANE || object_id == ROCKET_TOWER || object_id == FARM || object_id == CANNON_TOWER || object_id == MORTAR_TOWER || object_id == SLOW_TOWER || object_id == PORTAL || object_id == CASTLE)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -186,6 +190,17 @@ void main()
     else if (object_id == SLOW_TOWER)
     {
         vec3 kd_rocket = texture(TextureImage7, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else if (object_id == PORTAL)
+    {
+
+        vec3 kd_rocket = texture(TextureImage8, vec2(U,V)).rgb;
+        color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
+    }
+    else if (object_id == CASTLE)
+    {
+        vec3 kd_rocket = texture(TextureImage9, vec2(U,V)).rgb;
         color.rgb = kd_rocket * lambert + kd_rocket * 0.1; 
     }
     else // objetos (BUNNY, PLANE)

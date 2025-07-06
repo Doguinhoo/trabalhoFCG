@@ -64,10 +64,12 @@ Enemy* NearestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self
     float bestD2 = std::numeric_limits<float>::infinity();
     Hitbox rs = self.rangeHitbox();
     for (auto* e : enemies) {
-        if (!e->alive || !rs.intersects(e->hitbox)) continue;
-        if (e->attribute == EnemyAttribute::FLYING && !self.canTargetFlying) {
+        if (!e->alive || !rs.intersects(e->hitbox)) 
             continue;
-        }
+            
+        if (e->attribute == EnemyAttribute::FLYING && !self.canTargetFlying) 
+            continue;
+        
         glm::vec3 d = e->hitbox.center - self.pos;
         float d2 = glm::dot(d,d);
         if (d2 < bestD2) {

@@ -598,8 +598,8 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/mortar_tower.jpg");                 // TextureImage5
     LoadTextureImage("../../data/ceu.jpg");                          // TextureImage6
     LoadTextureImage("../../data/slow_tower.jpg");                   // TexturaImage7
-
-
+    LoadTextureImage("../../data/portal.jpg");                       // TexturaImage8
+    LoadTextureImage("../../data/castle.jpg");                       // TexturaImage9
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -633,6 +633,15 @@ int main(int argc, char* argv[])
     ObjModel slowmodel("../../data/slow_tower.obj");
     ComputeNormals(&slowmodel);
     BuildTrianglesAndAddToVirtualScene(&slowmodel);
+
+    ObjModel portalmodel("../../data/portal.obj");
+    ComputeNormals(&portalmodel);
+    BuildTrianglesAndAddToVirtualScene(&portalmodel);
+
+    ObjModel castlemodel("../../data/castle.obj");
+    ComputeNormals(&castlemodel);
+    BuildTrianglesAndAddToVirtualScene(&castlemodel);
+
 
     if ( argc > 1 )
     {
@@ -803,7 +812,8 @@ int main(int argc, char* argv[])
         #define SKYBOX 7
         #define RANGE_INDICATOR 8
         #define SLOW 9
-
+        #define PORTAL 10
+        #define CASTLE 11
 
         glDepthFunc(GL_LEQUAL); 
         glUseProgram(g_GpuProgramID); 
@@ -850,6 +860,32 @@ int main(int argc, char* argv[])
             // Desenha um único "pedaço de terra"
             DrawVirtualObject("the_plane");
         }
+
+        // Portal
+        glm::vec3 portal_pos = g_enemyPath->getStartPoint();
+        glm::vec3 portal_tangent = glm::normalize(g_enemyPath->getPoint(0.01f) - portal_pos);
+        float portal_angle = atan2(portal_tangent.x, portal_tangent.z);
+
+        model = Matrix_Translate(portal_pos.x, 0.0f, portal_pos.z)
+            * Matrix_Rotate_Y(-portal_angle); 
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, PORTAL);
+        DrawVirtualObject("the_portal"); 
+
+
+        // Castelo
+        glm::vec3 castle_pos = g_enemyPath->getEndPoint();
+        glm::vec3 castle_tangent = glm::normalize(castle_pos - g_enemyPath->getPoint(0.99f));
+        float castle_angle = atan2(castle_tangent.x, castle_tangent.z);
+
+        model = Matrix_Translate(castle_pos.x, 0.2f, castle_pos.z)
+                * Matrix_Scale (2.0f, 2.0f, 2.0f)
+                * Matrix_Rotate_Y(-castle_angle);
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, CASTLE);
+        DrawVirtualObject("the_castle"); //
+
+
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
@@ -901,6 +937,17 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, SLOW);
         DrawVirtualObject("the_slow_tower");
+
+                // Desenhamos a Torre de Morteiro
+        model = Matrix_Translate(12.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, PORTAL);
+        DrawVirtualObject("the_portal");
+
+        model = Matrix_Translate(14.0f,0.0f,0.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, CASTLE);
+        DrawVirtualObject("the_castle");
 
         // Loop que desenha torre ao comprar
         for (const auto& tower : g_towers)
@@ -1211,6 +1258,8 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage5"), 5);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage6"), 6);
     glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage7"), 7);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage8"), 8);
+    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage9"), 9);
     glUseProgram(0);
 }
 

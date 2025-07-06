@@ -16,10 +16,9 @@ void EnemyManager::cleanup(float& playerMoney) {
     enemies.erase(
         std::remove_if(
             enemies.begin(), enemies.end(),
-            // A lambda agora captura playerMoney por referência
             [&playerMoney](const std::unique_ptr<Enemy>& e) {
                 if (!e->alive) {
-                    // Se o inimigo está morto, adiciona a recompensa!
+                    // Se o inimigo está morto, adiciona a recompensa
                     playerMoney += e->reward;
                     printf("+%d de dinheiro! Inimigo derrotado.\n", e->reward);
                     return true; // Retorna true para marcar para remoção
