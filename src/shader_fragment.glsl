@@ -28,6 +28,11 @@ uniform mat4 projection;
 #define MORTAR_TOWER 6
 #define SKYBOX 7
 #define RANGE_INDICATOR 8
+#define CANNON_ICON 10
+#define FARM_ICON 11
+#define ROCKET_ICON 12
+#define MORTAR_ICON 13
+
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -42,6 +47,10 @@ uniform sampler2D TextureImage3;
 uniform sampler2D TextureImage4;
 uniform sampler2D TextureImage5;
 uniform sampler2D TextureImage6;
+uniform sampler2D TextureImage7;
+uniform sampler2D TextureImage8;
+uniform sampler2D TextureImage9;
+uniform sampler2D TextureImage10;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -180,6 +189,27 @@ void main()
     {
 
         color = vec4(0.1, 0.5, 1.0, 0.2);
+    }
+    else if (object_id == CANNON_ICON)
+    {
+        // Usa a textura do ícone do canhão.
+        // O número da TextureImageX deve corresponder à ORDEM de carregamento no C++
+        color = texture(TextureImage7, texcoords); // Assumindo que o ícone do canhão é a 8ª imagem (índice 7)
+    }
+    else if (object_id == FARM_ICON)
+    {
+        // Usa a textura do ícone da farm.
+        color = texture(TextureImage8, texcoords); // Assumindo que é a 9ª imagem (índice 8)
+    }
+    else if (object_id == ROCKET_ICON)
+    {
+        // Usa a textura do ícone do foguete.
+        color = texture(TextureImage9, texcoords); // Assumindo que é a 10ª imagem (índice 9)
+    }
+    else if (object_id == MORTAR_ICON)
+    {
+        // Usa a textura do ícone do morteiro.
+        color = texture(TextureImage10, texcoords); // Assumindo que é a 11ª imagem (índice 10)
     }
     else // objetos (BUNNY, PLANE)
     {

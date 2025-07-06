@@ -76,6 +76,17 @@ public:
         return out;
     }
 
+    const TowerBlueprint* getBlueprint(const std::string& name) const
+    {
+        auto it = blueprints.find(name);
+        if (it != blueprints.end()) {
+            // Retorna um ponteiro para o blueprint encontrado
+            return &it->second;
+        }
+        // Retorna nullptr se o blueprint não for encontrado
+        return nullptr;
+    }
+    
 private:
     std::unordered_map<std::string, TowerBlueprint> blueprints;
 };

@@ -7,8 +7,8 @@
 // --- Implementação da Classe Tower ---
 Tower::Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
              std::unique_ptr<ITargeting> t, std::unique_ptr<IShooting> s, std::unique_ptr<IPassiveAbility> pa)
-    // E o novo membro 'modelName' precisa ser inicializado aqui na lista
-    : blueprintName(bpName), modelName(mdlName), pos(p), range(r), cooldown(cd),
+    // A lista de inicialização agora inclui a hitbox
+    : blueprintName(bpName), modelName(mdlName), pos(p), hitbox({p, 1.0f}), range(r), cooldown(cd),
       targeting(std::move(t)), shooting(std::move(s)), passiveAbility(std::move(pa)){}
 
 Hitbox Tower::rangeHitbox() const {
@@ -148,6 +148,7 @@ void ProjectileShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>&) {
     if (target) target->applyDamage(damage);
 }
 
+
 void FullAoeShot::fire(Enemy*, Tower& self, const std::vector<Enemy*>& all_enemies) {
     Hitbox range = self.rangeHitbox();
     float damage_this_tick = damagePerSecond * self.cooldown;
@@ -184,9 +185,35 @@ void SplashDamageShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>& al
     }
 }
 
+std::string ProjectileShot::getDamageInfo() const {
+    return std::to_string((int)damage);
+}
+
+std::string SplashDamageShot::getDamageInfo() const {
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "%d (+%d)", (int)primaryDamage, (int)splashDamage);
+    return std::string(buffer);
+}
+
+std::string ConeShot::getDamageInfo() const {
+    return std::to_string((int)damage);
+}
+
+std::string FullAoeShot::getDamageInfo() const {
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "%d/s", (int)damagePerSecond);
+    return std::string(buffer);
+}
+
 // --- Implementações de IPassiveAbility ---
 
 void GenerateIncome::onRoundEnd(Tower& self, float& playerMoney) {
     playerMoney += incomePerRound;
     printf("Farm em (%.1f, %.1f) gerou +%d de dinheiro.\n", self.pos.x, self.pos.z, incomePerRound);
+}
+
+std::string GenerateIncome::getInfo() const {
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "+%d / round", incomePerRound);
+    return std::string(buffer);
 }

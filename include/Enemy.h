@@ -31,6 +31,7 @@ class Enemy {
 public:
     Hitbox                     hitbox;
     float                      health;
+    float                      maxHealth;
     float                      baseSpeed;
     EnemyAttribute             attribute;
     bool                       alive = true;
@@ -41,9 +42,10 @@ public:
     Enemy(const glm::vec3& pos, float radius, float hp, float speed, EnemyAttribute attr, int rewardValue, std::unique_ptr<IMovement> mv)
       : hitbox{pos, radius}, 
         health(hp), 
+        maxHealth(hp),
         baseSpeed(speed), 
         attribute(attr), 
-        reward(rewardValue), 
+        reward(rewardValue),
         movement(std::move(mv)) {}
 
     float speed() const {

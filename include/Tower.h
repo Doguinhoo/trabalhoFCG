@@ -22,11 +22,13 @@ struct ITargeting {
 struct IShooting {
     virtual ~IShooting() = default;
     virtual void fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) = 0;
+    virtual std::string getDamageInfo() const = 0; 
 };
 
 struct IPassiveAbility {
     virtual ~IPassiveAbility() = default;
     virtual void onRoundEnd(Tower& self, float& playerMoney) = 0;
+    virtual std::string getInfo() const = 0; 
 };
 
 class Tower {
@@ -67,27 +69,32 @@ struct ProjectileShot : IShooting {
     float damage, speed;
     ProjectileShot(float dmg, float spd) : damage(dmg), speed(spd) {}
     void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
 };
 struct FullAoeShot : IShooting {
     float damagePerSecond;
     FullAoeShot(float dps) : damagePerSecond(dps) {}
     void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
 };
 
 struct ConeShot : IShooting {
     float damage, coneAngle;
     ConeShot(float dmg, float angle_rad) : damage(dmg), coneAngle(angle_rad) {}
     void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
 };
 
 struct SplashDamageShot : IShooting {
     float primaryDamage, splashDamage, splashRadius;
     SplashDamageShot(float p_dmg, float s_dmg, float s_r) : primaryDamage(p_dmg), splashDamage(s_dmg), splashRadius(s_r) {}
     void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
 };
 
 struct GenerateIncome : IPassiveAbility {
     int incomePerRound;
     GenerateIncome(int income) : incomePerRound(income) {}
     void onRoundEnd(Tower&, float&) override;
+    std::string getInfo() const override;
 };
