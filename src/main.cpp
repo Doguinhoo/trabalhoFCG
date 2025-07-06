@@ -256,6 +256,7 @@ EnemyManager g_enemyManager;
 Shop g_shop;
 std::vector<std::unique_ptr<Tower>> g_towers;
 float g_playerMoney = 500.0f;
+int   g_playerLives = 5; 
 std::shared_ptr<Path> g_enemyPath;
 double g_cursor_x = 0.0;
 double g_cursor_y = 0.0;
@@ -320,9 +321,10 @@ void SetupGame()
 {
     printf("Configurando o jogo...\n");
 
-    // --- cminho dos inimigos é uma curva bezier ---
+    // --- caminho dos inimigos é uma curva bezier ---
     std::vector<glm::vec4> controlPoints = {
         {-20.0f, -1.0f, 0.0f, 1.0f}, {-5.0f, -1.0f, 15.0f, 1.0f},
+        {10.0f, -1.0f, 5.0f, 1.0f}, {-10.0f, -1.0f, 10.0f, 1.0f},
         {5.0f,  -1.0f, -15.0f, 1.0f}, {20.0f, -1.0f, 0.0f, 1.0f}
     };
     g_enemyPath = std::shared_ptr<Path>(new Path(controlPoints));
@@ -337,8 +339,7 @@ void SetupGame()
     g_targetingFactories.push_back(makeNearest);
     g_targetingFactories.push_back(makeFlyingPriority);
 
-    //
-        g_roundWaves.clear();
+    g_roundWaves.clear();
 
     // Inimigos normais e simples
     Wave round1;
@@ -444,6 +445,19 @@ void SetupGame()
     g_shop.registerTower(ice_tower_bp);
 
     printf("Setup do jogo concluído!\n");
+}
+
+void ResetGame()
+{
+    printf("Fim de Jogo! A base foi destruída. Resetando para o início...\n");
+    g_playerLives = 5;
+    g_playerMoney = 500;
+    g_towers.clear();
+    g_enemyManager.clearAll();
+    g_currentRound = 0;
+    g_isRoundActive = false;
+    g_selectedTower = nullptr;
+    g_cameraMode = CameraMode::ORBIT;
 }
 
 // Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
@@ -695,8 +709,19 @@ int main(int argc, char* argv[])
                 g_enemiesToSpawnForRound--;
             }
 
-            // Atualiza a lógica de todos os inimigos (movimento, etc.)
-            g_enemyManager.updateAll(delta_t, g_playerMoney);
+            int finished_count = g_enemyManager.updateAll(delta_t, g_playerMoney);
+            if (finished_count > 0)
+            {
+                g_playerLives -= finished_count;
+                printf("%d inimigo(s) alcancaram a base! Vidas restantes: %d\n", finished_count, g_playerLives);
+            }
+
+
+            if (g_playerLives <= 0)
+            {
+                ResetGame();
+            }
+
             auto enemy_pointers = g_enemyManager.getEnemyPointers();
 
             // Atualiza a lógica de todas as torres (mirar e atirar)
@@ -826,7 +851,6 @@ int main(int argc, char* argv[])
         DrawVirtualObject("the_sphere"); // Usando a esfera como skybox
         glDepthFunc(GL_LESS); 
 
-            // Define qual ID e qual textura vamos usar para os "carimbos"
         glUniform1i(g_object_id_uniform, CAMINHO);
 
         float path_length = g_enemyPath->getTotalLength();
@@ -1014,13 +1038,13 @@ int main(int argc, char* argv[])
         }
 
 
-        // HUD
-        // FIM DO HUD
         char buffer[100];
         snprintf(buffer, sizeof(buffer), "Dinheiro: %.0f", g_playerMoney);
         TextRendering_PrintString(window, buffer, -0.95f, 0.95f);
-        snprintf(buffer, sizeof(buffer), "Round: %d", g_currentRound);
+        snprintf(buffer, sizeof(buffer), "Vida: %d", g_playerLives);
         TextRendering_PrintString(window, buffer, -0.95f, 0.90f);
+        snprintf(buffer, sizeof(buffer), "Round: %d", g_currentRound);
+        TextRendering_PrintString(window, buffer, -0.95f, 0.85f);
 
         if (!g_isRoundActive && g_currentRound < g_totalRounds) {
             snprintf(buffer, sizeof(buffer), "Pressione 'G' para iniciar o Round %d", g_currentRound + 1);

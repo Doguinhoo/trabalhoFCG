@@ -10,8 +10,8 @@ public:
     ~EnemyManager() = default;
 
     void spawn(std::unique_ptr<Enemy> enemy);
-    void updateAll(float dt, float& playerMoney);
-    void renderAll() const;
+    int updateAll(float dt, float& playerMoney); 
+    void clearAll();
     std::vector<Enemy*> getEnemyPointers() const;
 
 private:

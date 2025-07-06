@@ -35,6 +35,7 @@ public:
     float                      baseSpeed;
     EnemyAttribute             attribute;
     bool                       alive = true;
+    bool                       killedByPlayer = true;
     bool                       isSlowed = false; 
     float                      slowTimer = 0.0f;   
     std::unique_ptr<IMovement> movement;
@@ -100,7 +101,8 @@ struct BezierMovement : IMovement {
         e.distanceTraveled += e.speed() * dt;
         if (e.distanceTraveled >= caminho->getTotalLength()) {
             e.hitbox.center = caminho->getEndPoint();
-            e.alive = false;                   
+            e.alive = false;
+            e.killedByPlayer = false;                   
             e.reward = 0; 
             printf("Um inimigo chegou a base!\n"); 
             return;
