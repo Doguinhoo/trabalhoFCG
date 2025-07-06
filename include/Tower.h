@@ -17,6 +17,7 @@ std::unique_ptr<T> make_unique(Args&&... args) {
 struct ITargeting {
     virtual ~ITargeting() = default;
     virtual Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) = 0;
+    virtual std::string getModeName() const = 0; 
 };
 
 struct IShooting {
@@ -40,6 +41,7 @@ public:
     float     range;
     float     cooldown;
     float     timer = 0.f;
+    int    targetingModeIndex = 0;
     Enemy* currentTarget = nullptr; 
     float  currentYRotation = 0.0f; 
 
@@ -58,12 +60,12 @@ public:
 };
 
 // Declarações de estratégias concretas (implementações em Tower.cpp)
-struct NearestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
-struct WeakestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
-struct StrongestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
-struct FirstTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
-struct LastTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
-struct FlyingPriorityTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; };
+struct NearestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
+struct WeakestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
+struct StrongestTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
+struct FirstTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
+struct LastTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
+struct FlyingPriorityTarget : ITargeting { Enemy* pick(const std::vector<Enemy*>&, const Tower&) override; std::string getModeName() const override;};
 
 struct ProjectileShot : IShooting {
     float damage, speed;

@@ -66,6 +66,8 @@ Enemy* NearestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self
     return best;
 }
 
+std::string NearestTarget::getModeName() const { return "Mais Proximo"; }
+
 Enemy* WeakestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* weakest = nullptr;
     float lowestHealth = std::numeric_limits<float>::infinity();
@@ -79,6 +81,8 @@ Enemy* WeakestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self
     }
     return weakest;
 }
+
+std::string WeakestTarget::getModeName() const { return "Mais Fraco"; }
 
 Enemy* StrongestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* strongest = nullptr;
@@ -94,6 +98,8 @@ Enemy* StrongestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& se
     return strongest;
 }
 
+std::string StrongestTarget::getModeName() const { return "Mais Forte"; }
+
 Enemy* FirstTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* first = nullptr;
     float maxDistance = -1.0f;
@@ -108,6 +114,8 @@ Enemy* FirstTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) 
     return first;
 }
 
+std::string FirstTarget::getModeName() const { return "Primeiro"; }
+
 Enemy* LastTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* last = nullptr;
     float minDistance = std::numeric_limits<float>::infinity();
@@ -121,6 +129,8 @@ Enemy* LastTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     }
     return last;
 }
+
+std::string LastTarget::getModeName() const { return "Ultimo"; }
 
 Enemy* FlyingPriorityTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* bestFlying = nullptr;
@@ -141,6 +151,8 @@ Enemy* FlyingPriorityTarget::pick(const std::vector<Enemy*>& enemies, const Towe
     FirstTarget fallback;
     return fallback.pick(enemies, self);
 }
+
+std::string FlyingPriorityTarget::getModeName() const { return "Voador"; }
 
 // --- Implementações de IShooting ---
 

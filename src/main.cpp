@@ -276,16 +276,6 @@ struct DummyMovement : IMovement {
     void move(Enemy& , float) override {}
 };
 
-// Fábrica de targeting “nearest”
-static std::unique_ptr<ITargeting> makeNearest() {
-    return std::unique_ptr<NearestTarget>(new NearestTarget());
-}
-
-// Fábrica de shooting sem dano
-static std::unique_ptr<IShooting> makeDummyShot() {
-    return std::unique_ptr<ProjectileShot>(new ProjectileShot(0.0f, 0.0f));
-}
-
 static std::unique_ptr<ITargeting> makeFirst() { 
     return std::unique_ptr<FirstTarget>(new FirstTarget()); 
 }
@@ -293,6 +283,25 @@ static std::unique_ptr<ITargeting> makeFirst() {
 static std::unique_ptr<ITargeting> makeStrongest() { 
     return std::unique_ptr<StrongestTarget>(new StrongestTarget()); 
 }
+
+static std::unique_ptr<ITargeting> makeNearest() { 
+    return std::unique_ptr<NearestTarget>(new NearestTarget());
+}
+
+static std::unique_ptr<ITargeting> makeWeakest() { 
+    return std::unique_ptr<WeakestTarget>(new WeakestTarget());
+}
+
+static std::unique_ptr<ITargeting> makeLast() { 
+    return std::unique_ptr<LastTarget>(new LastTarget());
+}
+
+static std::unique_ptr<ITargeting> makeFlyingPriority() { 
+    return std::unique_ptr<FlyingPriorityTarget>(new FlyingPriorityTarget());
+}
+
+std::vector<std::function<std::unique_ptr<ITargeting>()>> g_targetingFactories;
+
 
 void SetupGame()
 {
@@ -306,6 +315,14 @@ void SetupGame()
     g_enemyPath = std::shared_ptr<Path>(new Path(controlPoints));
     g_enemyPath->precompute();
 
+    g_targetingFactories.clear(); 
+    
+    g_targetingFactories.push_back(makeFirst);
+    g_targetingFactories.push_back(makeLast);
+    g_targetingFactories.push_back(makeStrongest);
+    g_targetingFactories.push_back(makeWeakest); 
+    g_targetingFactories.push_back(makeNearest);
+    g_targetingFactories.push_back(makeFlyingPriority);
     // --- Torre de Canhão ---
     TowerBlueprint cannonV1_bp;
     cannonV1_bp.name = "CannonTower_V1";
@@ -368,93 +385,6 @@ void SetupGame()
     g_shop.registerTower(farm_bp);
 
     printf("Setup do jogo concluído!\n");
-}
-
-void teste()
-{
-    printf("--- INICIANDO TESTE DE ECONOMIA E UPGRADES ---\n");
-
-    Shop shop;
-    float playerMoney = 200.0f;
-
-    // --- Blueprints ---
-    // Farm
-    TowerBlueprint farm_bp;
-    farm_bp.name = "Farm_V1";
-    farm_bp.cost = 100;
-    farm_bp.passiveFactory = []() { return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
-    shop.registerTower(farm_bp);
-
-    // Canhão Nível 1
-    TowerBlueprint cannon_v1_bp;
-    cannon_v1_bp.name = "Cannon_V1";
-    cannon_v1_bp.cost = 75;
-    cannon_v1_bp.range = 7.0f;
-    cannon_v1_bp.cooldown = 1.5f;
-    cannon_v1_bp.targetingFactory = []() { return std::unique_ptr<FirstTarget>(new FirstTarget()); };
-    cannon_v1_bp.shootingFactory = []() { return std::unique_ptr<ProjectileShot>(new ProjectileShot(10, 10)); };
-    cannon_v1_bp.upgradeCost = 80;
-    cannon_v1_bp.nextUpgradeName = "Cannon_V2";
-    shop.registerTower(cannon_v1_bp);
-
-    // Canhão Nível 2 (com sintaxe revisada)
-    TowerBlueprint cannon_v2_bp;
-    cannon_v2_bp.name = "Cannon_V2";
-    cannon_v2_bp.cost = 0;
-    cannon_v2_bp.range = 9.0f;
-    cannon_v2_bp.cooldown = 1.2f;
-    cannon_v2_bp.targetingFactory = []() { return std::unique_ptr<FirstTarget>(new FirstTarget()); };
-    cannon_v2_bp.shootingFactory = []() { return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 10)); };
-    shop.registerTower(cannon_v2_bp);
-
-    // --- Comprando Torres ---
-    std::vector<std::unique_ptr<Tower>> towers;
-    towers.push_back(shop.buy("Farm_V1", playerMoney, {5.0f, 0.0f, 0.0f}));
-    towers.push_back(shop.buy("Cannon_V1", playerMoney, {-5.0f, 0.0f, 0.0f}));
-    
-    float money_after_buy = playerMoney;
-    printf("Setup inicial: %.1f de dinheiro, %zu torres construídas.\n", money_after_buy, towers.size());
-    assert(money_after_buy == 25.0f);
-
-    // --- Teste de Renda ---
-    printf("\nSimulando o fim de um round...\n");
-    for (const auto& tower : towers) { tower->updateEndOfRound(playerMoney); }
-    printf("Dinheiro após a renda da Farm: %.1f\n", playerMoney);
-    assert(playerMoney == 75.0f);
-
-    // --- Teste de Upgrade com Sucesso ---
-    playerMoney += 100.0f; // Adiciona dinheiro para o teste passar (total = 175)
-    float money_before_upgrade = playerMoney;
-    printf("\nAdicionando dinheiro. Tentando upgrade (custo: %d)...\n", cannon_v1_bp.upgradeCost);
-    
-    // A lógica para encontrar e substituir a torre
-    std::unique_ptr<Tower>* cannon_ptr = nullptr;
-    for (auto& t : towers) {
-        if (t->blueprintName == "Cannon_V1") {
-            cannon_ptr = &t;
-            break;
-        }
-    }
-    assert(cannon_ptr != nullptr);
-    
-    auto upgraded_tower = shop.upgrade(**cannon_ptr, playerMoney);
-    
-    // Verificação final
-    assert(upgraded_tower != nullptr); // AQUI NÃO DEVE MAIS FALHAR
-    
-    if (upgraded_tower) {
-        *cannon_ptr = std::move(upgraded_tower);
-    }
-    
-    printf("Dinheiro final: %.1f\n", playerMoney);
-    const auto& final_cannon = *cannon_ptr;
-    printf("Blueprint do canhão agora é: '%s', com range de %.1f\n", final_cannon->blueprintName.c_str(), final_cannon->range);
-
-    assert(playerMoney == (money_before_upgrade - cannon_v1_bp.upgradeCost));
-    assert(final_cannon->blueprintName == "Cannon_V2");
-    assert(final_cannon->range == 9.0f);
-
-    printf("\n--- TESTE DE ECONOMIA E UPGRADES CONCLUÍDO COM SUCESSO! ---\n\n");
 }
 
 // Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
@@ -983,36 +913,51 @@ int main(int argc, char* argv[])
 
         if (g_selectedTower)
         {
-            float text_y = -0.50f;
+            float text_y = -0.40f;
             float line_height = 0.05f;
 
-            // Mostra o nome da torre
+           // Mostra o nome da torre
             snprintf(buffer, sizeof(buffer), "Torre Selecionada: %s", g_selectedTower->blueprintName.c_str());
             TextRendering_PrintString(window, buffer, -0.95f, text_y);
 
-            if (g_selectedTower->shooting) { // Verifica se a torre pode atirar
+            // Verifica se a torre pode atacar para mostrar Dano, Cooldown e Foco
+            if (g_selectedTower->shooting) 
+            {
+                
+                // Mostra o Range
+                snprintf(buffer, sizeof(buffer), "- Range: %.1f", g_selectedTower->range);
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - line_height);
+            
+                // Mostra o Cooldown
+                snprintf(buffer, sizeof(buffer), "- Cooldown: %.1f", g_selectedTower->cooldown);
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
+
+                // Mostra o Dano
                 std::string damage_info = g_selectedTower->shooting->getDamageInfo();
                 snprintf(buffer, sizeof(buffer), "- Dano: %s", damage_info.c_str());
                 TextRendering_PrintString(window, buffer, -0.95f, text_y - 3*line_height);
+
+                // MOSTRA O FOCO ATUAL DA TORRE
+                if (g_selectedTower->targeting) {
+                    std::string mode_info = g_selectedTower->targeting->getModeName();
+                    snprintf(buffer, sizeof(buffer), "- Foco: %s", mode_info.c_str());
+                    TextRendering_PrintString(window, buffer, -0.95f, text_y - 4*line_height);
+                }
             }
-            else if (g_selectedTower->passiveAbility) // Se for uma torre passiva (Farm)
+            // Se for uma torre passiva (Farm), mostra sua habilidade
+            else if (g_selectedTower->passiveAbility)
             {
                 std::string passive_info = g_selectedTower->passiveAbility->getInfo();
                 snprintf(buffer, sizeof(buffer), "- Habilidade: %s", passive_info.c_str());
-                TextRendering_PrintString(window, buffer, -0.95f, text_y - 3*line_height);
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
             }
-
-            // Mostra os status
-            snprintf(buffer, sizeof(buffer), "- Range: %.1f", g_selectedTower->range);
-            TextRendering_PrintString(window, buffer, -0.95f, text_y - line_height);
-            snprintf(buffer, sizeof(buffer), "- Cooldown: %.1f", g_selectedTower->cooldown);
-            TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
+            
 
             // Mostra as opções (botões)
-            TextRendering_PrintString(window, "[U] - Upgrade", -0.95f, text_y - 4*line_height);
-            TextRendering_PrintString(window, "[V] - Vender", -0.95f, text_y - 5*line_height);
-            TextRendering_PrintString(window, "[F] - Ver da Torre", -0.95f, text_y - 6*line_height);
-            TextRendering_PrintString(window, "[ESC] - Desselecionar", -0.95f, text_y - 7*line_height);
+            TextRendering_PrintString(window, "[U] - Upgrade", -0.95f, text_y - 5*line_height);
+            TextRendering_PrintString(window, "[V] - Vender", -0.95f, text_y - 6*line_height);
+            TextRendering_PrintString(window, "[F] - Ver da Torre", -0.95f, text_y - 7*line_height);
+            TextRendering_PrintString(window, "[Q] - Mudar Foco", -0.95f, text_y - 8*line_height);
         }
 
 
@@ -1040,7 +985,6 @@ int main(int argc, char* argv[])
         // pela biblioteca GLFW.
         glfwPollEvents();
     }
-    teste();
     // Finalizamos o uso dos recursos do sistema operacional
     glfwTerminate();
 
@@ -1951,6 +1895,23 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_F && action == GLFW_PRESS && g_selectedTower)
     {
         ToggleTowerFOV(); // Chama a função que você já tem
+    }
+
+    if (key == GLFW_KEY_Q && action == GLFW_PRESS && g_selectedTower != nullptr)
+    {
+        if (g_selectedTower->targeting && !g_targetingFactories.empty())
+        {
+            // Pega o índice atual e calcula o próximo, dando a volta na lista
+            int nextIndex = (g_selectedTower->targetingModeIndex + 1) % g_targetingFactories.size();
+            
+            // Cria o novo componente de mira usando a fábrica da lista
+            g_selectedTower->targeting = g_targetingFactories[nextIndex]();
+            
+            // Atualiza o índice na torre
+            g_selectedTower->targetingModeIndex = nextIndex;
+
+            printf("Novo modo de foco da torre: %s\n", g_selectedTower->targeting->getModeName().c_str());
+        }
     }
 
     // Pressionar 'ESC' para fechar a janela ou o jogo
