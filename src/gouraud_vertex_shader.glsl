@@ -13,8 +13,6 @@ uniform mat4 projection;
 
 uniform vec4 light_source;
 uniform vec3 light_color;
-uniform vec3 ambient_color;
-uniform vec3 Ka;
 uniform vec3 Ks;
 uniform float q;
 
@@ -26,7 +24,8 @@ out vec4 position_world;
 out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
-out vec3 gouraud;
+out vec3 lambert;
+out vec3 blinn_phong;
 
 const vec4 ORIGIN = vec4(0.0,0.0,0.0,1.0);
 
@@ -71,17 +70,12 @@ void main() {
     }
 
     // Termo difuso utilizando a lei dos cossenos de Lambert
-    vec3 lambert_diffuse_term = light_color*max(0, dot(n, l));
+    lambert = light_color*max(0, dot(n, l));
 
     // Termo especular utilizando o modelo de iluminação de Phong
     vec4 camera_position = inverse(view) * ORIGIN;
     vec4 v = normalize(camera_position - p);
     vec4 h = normalize(v + l);
-    vec3 phong_specular_term  = Ks*light_color*pow(max(dot(n, h), 0.0), q);
-
-    // Termo ambiente
-    vec3 ambient_term = Ka*ambient_color;
-
-    gouraud.rgb = lambert_diffuse_term + ambient_term + phong_specular_term;
+    blinn_phong = Ks*light_color*pow(max(dot(n, h), 0.0), q);
 }
 

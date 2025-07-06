@@ -13,7 +13,8 @@ in vec4 position_model;
 // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
 in vec2 texcoords;
 
-in vec3 gouraud;
+in vec3 lambert;
+in vec3 blinn_phong;
 
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
@@ -26,6 +27,9 @@ uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImages[1];
+
+uniform vec3 ambient_color;
+uniform vec3 Ka;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -44,8 +48,9 @@ void main() {
     float u = (theta + M_PI)/(2*M_PI);
     float v = (phi + M_PI_2)/M_PI;
 
-    color = texture(TextureImages[0], vec2(u, v));
-    color.rgb = color.rgb * gouraud;
+    vec3 Kd = texture(TextureImages[0], vec2(u, v)).rgb;
+
+    color.rgb = Kd*lambert + blinn_phong + Ka*ambient_color;
 
     // Cor final com correção gamma, considerando monitor sRGB.
     // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas

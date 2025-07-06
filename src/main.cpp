@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
     const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
     const glm::vec3 Ka = glm::vec3(0.01f, 0.01f, 0.01f);
     const glm::vec3 Ks = glm::vec3(0.8f, 0.8f, 0.8f);
-    const float q = 10;
+    const float q = 60;
     
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
