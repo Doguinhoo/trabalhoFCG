@@ -6,6 +6,9 @@
 # Arquivos fonte C/C++. Inclua nesta lista todos os arquivos que devem
 # ser compilados.
 set(SOURCES
+  src/EnemyManager.cpp 
+  src/bezier.cpp
+  src/Tower.cpp
   src/main.cpp
   src/matrices.cpp
   src/rendering.cpp

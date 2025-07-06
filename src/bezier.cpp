@@ -1,4 +1,5 @@
 #include "bezier.hpp"
+
 #include <glm/vec4.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <vector>
@@ -6,6 +7,8 @@
 #include <cstdio>
 #include <iostream>
 
+// Curva bezier
+// Usada para definir os caminhos do inimigo
 CurvaBezier::CurvaBezier(glm::vec4 *pontos, size_t num_pontos) {
     this->pontos.insert(this->pontos.begin(), pontos, pontos + num_pontos);
 }

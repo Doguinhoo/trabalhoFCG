@@ -20,6 +20,8 @@
 #include <cstdlib>
 
 // Headers abaixo são específicos de C++
+using namespace std;
+#include <iostream>
 #include <map>
 #include <stack>
 #include <string>
@@ -44,6 +46,14 @@
 #include "matrices.hpp"
 #include "bezier.hpp"
 
+// Headers das estruturas
+#include "EnemyManager.h"
+#include "Enemy.h"
+#include "Shop.h"
+#include "TowerBlueprint.h"
+#include "Tower.h"
+#include "Path.h"
+
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
 void PopMatrix(glm::mat4& M);
@@ -51,7 +61,7 @@ void PopMatrix(glm::mat4& M);
 void LoadContext();
 void UnloadContext();
 
-// Funções callback para comunicação com o sistema operacional e interação do
+// Declaração de funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void ErrorCallback(int error, const char* description);
@@ -59,14 +69,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-
-// Abaixo definimos variáveis globais utilizadas em várias funções do código.
-
-// A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
-// (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
-// objetos dentro da variável g_VirtualScene, e veja na função main() como
-// estes são acessados.
-VirtualScene g_VirtualScene;
 
 // Pilha que guardará as matrizes de modelagem.
 std::stack<glm::mat4>  g_MatrixStack;
@@ -93,6 +95,14 @@ float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
 float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 
+// Variáveis que controlam rotação do antebraço
+float g_ForearmAngleZ = 0.0f;
+float g_ForearmAngleX = 0.0f;
+
+// Variáveis que controlam translação do torso
+float g_TorsoPositionX = 0.0f;
+float g_TorsoPositionY = 0.0f;
+
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
@@ -118,6 +128,296 @@ GLuint g_phong_gpu_program_id;
 GLuint g_phong_gpu_program_proj_esfer_id;
 GLuint g_phong_gpu_program_proj_planar_id;
 
+// pos inicial
+glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
+float prev_time = (float)glfwGetTime();
+float delta_t;
+
+// velocidade da camera
+float speed = 2.5f;
+
+// Teclas de movimentação
+bool press_W = false;
+bool press_S = false;
+bool press_D = false;
+bool press_A = false;
+
+// ===============================================
+// VARIÁVEIS DE ESTADO DO JOGO
+// ===============================================
+EnemyManager g_enemyManager;
+Shop g_shop;
+std::vector<std::unique_ptr<Tower>> g_towers;
+float g_playerMoney = 500.0f;
+int   g_playerLives = 5; 
+std::shared_ptr<Path> g_enemyPath;
+double g_cursor_x = 0.0;
+double g_cursor_y = 0.0;
+int   g_currentRound = 0;
+const int g_totalRounds = 20;
+bool  g_isRoundActive = false;
+float g_intermissionTimer = 10.0f;
+int g_enemiesToSpawnForRound = 0;
+Tower* g_selectedTower = nullptr;
+glm::mat4 g_view_matrix;
+glm::mat4 g_projection_matrix;
+bool g_isTowerInfoWindowOpen = false; 
+enum class CameraMode { ORBIT, TOWER_FOV };
+CameraMode g_cameraMode = CameraMode::ORBIT;
+
+// Movimento “dummy” que não faz nada
+struct DummyMovement : IMovement {
+    void move(Enemy& , float) override {}
+};
+
+static std::unique_ptr<ITargeting> makeFirst() { 
+    return std::unique_ptr<FirstTarget>(new FirstTarget()); 
+}
+
+static std::unique_ptr<ITargeting> makeStrongest() { 
+    return std::unique_ptr<StrongestTarget>(new StrongestTarget()); 
+}
+
+static std::unique_ptr<ITargeting> makeNearest() { 
+    return std::unique_ptr<NearestTarget>(new NearestTarget());
+}
+
+static std::unique_ptr<ITargeting> makeWeakest() { 
+    return std::unique_ptr<WeakestTarget>(new WeakestTarget());
+}
+
+static std::unique_ptr<ITargeting> makeLast() { 
+    return std::unique_ptr<LastTarget>(new LastTarget());
+}
+
+static std::unique_ptr<ITargeting> makeFlyingPriority() { 
+    return std::unique_ptr<FlyingPriorityTarget>(new FlyingPriorityTarget());
+}
+
+std::vector<std::function<std::unique_ptr<ITargeting>()>> g_targetingFactories;
+
+struct SpawnEvent {
+    float timeToNextSpawn; // Tempo de espera após o inimigo anterior
+    EnemyAttribute type;   // Tipo do inimigo (Normal/Resistant, Fast, Flying)
+    // Você pode adicionar mais campos aqui, como vida extra, etc.
+};
+
+// Descreve uma onda completa, que é uma sequência de eventos de spawn
+struct Wave {
+    std::vector<SpawnEvent> spawns;
+};
+
+// Lista global que define as ondas para cada round do jogo
+std::vector<Wave> g_roundWaves;
+
+void SetupGame() {
+    printf("Configurando o jogo...\n");
+
+    // --- caminho dos inimigos é uma curva bezier ---
+    std::vector<glm::vec4> controlPoints = {
+        {-20.0f, -1.0f, 0.0f, 1.0f}, {-5.0f, -1.0f, 15.0f, 1.0f},
+        {10.0f, -1.0f, 5.0f, 1.0f}, {-10.0f, -1.0f, 10.0f, 1.0f},
+        {5.0f,  -1.0f, -15.0f, 1.0f}, {20.0f, -1.0f, 0.0f, 1.0f}
+    };
+
+    g_enemyPath = std::shared_ptr<Path>(new Path(controlPoints));
+    g_enemyPath->precompute();
+
+    g_targetingFactories.clear(); 
+    
+    g_targetingFactories.push_back(makeFirst);
+    g_targetingFactories.push_back(makeLast);
+    g_targetingFactories.push_back(makeStrongest);
+    g_targetingFactories.push_back(makeWeakest); 
+    g_targetingFactories.push_back(makeNearest);
+    g_targetingFactories.push_back(makeFlyingPriority);
+
+    g_roundWaves.clear();
+
+    // Inimigos normais e simples
+    Wave round1;
+    for (int i = 0; i < 10; ++i) {
+        round1.spawns.push_back({1.5f, EnemyAttribute::RESISTANT}); // 10 inimigos resistentes, com 1.5s entre eles
+    }
+    g_roundWaves.push_back(round1);
+
+    // RInimigos um pouco mais rápidos e misturados
+    Wave round2;
+    for (int i = 0; i < 8; ++i) {
+        round2.spawns.push_back({1.0f, EnemyAttribute::RESISTANT});
+    }
+    for (int i = 0; i < 5; ++i) {
+        round2.spawns.push_back({0.8f, EnemyAttribute::FAST}); // Adiciona 5 inimigos rápidos no final
+    }
+    g_roundWaves.push_back(round2);
+
+    // Introdução de inimigos voadores
+    Wave round3;
+    for (int i = 0; i < 10; ++i) {
+        round3.spawns.push_back({1.2f, EnemyAttribute::RESISTANT});
+        if (i % 3 == 0) { // A cada 3 inimigos de chão, vem um voador
+            round3.spawns.push_back({0.5f, EnemyAttribute::FLYING});
+        }
+    }
+    g_roundWaves.push_back(round3);
+
+    // --- Torre de Canhão ---
+    TowerBlueprint cannonV1_bp;
+    cannonV1_bp.name = "CannonTower_V1";
+    cannonV1_bp.modelName = "the_cannon_tower";
+    cannonV1_bp.cost = 100;
+    cannonV1_bp.range = 8.0f;
+    cannonV1_bp.cooldown = 0.8f;
+    cannonV1_bp.targetingFactory = makeFirst;
+    cannonV1_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 0)); };
+    cannonV1_bp.passiveFactory = nullptr;
+    cannonV1_bp.upgradeCost = 150;
+    cannonV1_bp.nextUpgradeName = "CannonTower_V2";
+    g_shop.registerTower(cannonV1_bp);
+
+    TowerBlueprint cannonV2_bp;
+    cannonV2_bp.name = "CannonTower_V2";
+    cannonV2_bp.modelName = "the_cannon_tower";
+    cannonV2_bp.cost = 0;
+    cannonV2_bp.range = 9.5f;
+    cannonV2_bp.cooldown = 0.6f;
+    cannonV2_bp.targetingFactory = makeFirst;
+    cannonV2_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(45, 0)); };
+    cannonV2_bp.passiveFactory = nullptr; 
+    g_shop.registerTower(cannonV2_bp);
+
+    // --- Torre de Foguete ---
+    TowerBlueprint rocket_bp;
+    rocket_bp.name = "RocketTower";
+    rocket_bp.modelName = "the_rocket_tower";
+    rocket_bp.canTargetFlying = true;
+    rocket_bp.cost = 175;
+    rocket_bp.range = 12.0f;
+    rocket_bp.cooldown = 3.0f;
+    rocket_bp.targetingFactory = makeFirst;
+    rocket_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
+    rocket_bp.passiveFactory = nullptr; 
+    g_shop.registerTower(rocket_bp);
+    
+    // --- Torre de Morteiro ---
+    TowerBlueprint mortar_bp;
+    mortar_bp.name = "MortarTower";
+    mortar_bp.modelName = "the_mortar_tower";
+    mortar_bp.cost = 250;
+    mortar_bp.range = 18.0f;
+    mortar_bp.cooldown = 5.0f;
+    mortar_bp.targetingFactory = makeFirst;
+    mortar_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
+    mortar_bp.passiveFactory = nullptr; 
+    g_shop.registerTower(mortar_bp);
+
+    // --- Farm de Dinheiro ---
+    TowerBlueprint farm_bp;
+    farm_bp.name = "Farm";
+    farm_bp.modelName = "the_farm";
+    farm_bp.cost = 125;
+    farm_bp.range = 0.0f;
+    farm_bp.cooldown = 0.0f;
+    farm_bp.targetingFactory = nullptr;
+    farm_bp.shootingFactory = nullptr;  
+    farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
+    g_shop.registerTower(farm_bp);
+
+    // --- NOVA TORRE DE GELO ---
+    TowerBlueprint ice_tower_bp;
+    ice_tower_bp.name = "SlowTower";
+    ice_tower_bp.modelName = "the_slow_tower"; 
+    ice_tower_bp.cost = 50;
+    ice_tower_bp.range = 7.0f;
+    ice_tower_bp.cooldown = 2.5f;
+    ice_tower_bp.targetingFactory = makeFirst;
+    ice_tower_bp.shootingFactory = [](){ return std::unique_ptr<IceShot>(new IceShot(2.0f)); };
+    ice_tower_bp.passiveFactory = nullptr;
+    g_shop.registerTower(ice_tower_bp);
+
+    printf("Setup do jogo concluído!\n");
+}
+
+void ResetGame() {
+    printf("Fim de Jogo! A base foi destruída. Resetando para o início...\n");
+    g_playerLives = 5;
+    g_playerMoney = 500;
+    g_towers.clear();
+    g_enemyManager.clearAll();
+    g_currentRound = 0;
+    g_isRoundActive = false;
+    g_selectedTower = nullptr;
+    g_cameraMode = CameraMode::ORBIT;
+}
+
+// Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
+glm::vec3 GetCursorWorldPosition(GLFWwindow* window) {
+    // Obtém o tamanho da janela
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Converte as coordenadas do cursor (pixels) para Coordenadas Normalizadas de Dispositivo (NDC) [-1, 1]
+    float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
+    float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height; // Y é invertido
+
+    // Define um raio em espaço de recorte (Clip Space)
+    glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
+
+    // Converte o raio do espaço de recorte para o espaço da câmera (Eye Space)
+    glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
+    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0); // Direção para frente
+
+    // Converte o raio do espaço da câmera para o espaço do mundo (World Space)
+    glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
+
+    // Calcula a interseção do raio com o plano do chão (y = -1.0)
+    // Posição da câmera (origem do raio)
+    glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
+    
+    // Se o raio não estiver apontando para baixo, não haverá interseção
+    if (ray_world_dir.y >= 0.0f) {
+        return glm::vec3(0.0f, -999.0f, 0.0f); // Retorna uma posição inválida
+    }
+    
+    // Calcula a distância 't' até a interseção
+    float t = (-1.0f - ray_origin.y) / ray_world_dir.y;
+
+    // Retorna o ponto de interseção
+    return ray_origin + t * ray_world_dir;
+}
+
+void SellSelectedTower() {
+    if (!g_selectedTower) return;
+
+    // Encontra e remove a torre do vetor g_towers
+    g_towers.erase(std::remove_if(g_towers.begin(), g_towers.end(), 
+        [](const std::unique_ptr<Tower>& tower) {
+            return tower.get() == g_selectedTower;
+        }), 
+        g_towers.end()
+    );
+
+    // Devolve 75% do custo da torre para o jogador 
+    const auto& bp = g_shop.getBlueprint(g_selectedTower->blueprintName);
+    if (bp) {
+        g_playerMoney += bp->cost * 0.75f;
+    }
+
+    printf("Torre vendida!\n");
+    g_selectedTower = nullptr;
+    g_isTowerInfoWindowOpen = false;
+}
+
+void ToggleTowerFOV() {
+    if (g_cameraMode == CameraMode::ORBIT && g_selectedTower != nullptr) {
+        g_cameraMode = CameraMode::TOWER_FOV;
+        printf("Câmera em modo Terceira Pessoa.\n");
+    } else {
+        g_cameraMode = CameraMode::ORBIT;
+        printf("Câmera em modo Orbita.\n");
+    }
+}
+
 int main(int argc, char* argv[]) {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
@@ -126,7 +426,6 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "ERROR: glfwInit() failed.\n");
         std::exit(EXIT_FAILURE);
     }
-
     // Definimos o callback para impressão de erros da GLFW no terminal
     glfwSetErrorCallback(ErrorCallback);
 
@@ -183,42 +482,113 @@ int main(int argc, char* argv[]) {
 
     printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion); 
 
+    // Carregamos o contexto de shaders e texturas
     LoadContext();
 
-    GLint textureImagesArray[] = {0, 1};
-    std::vector<GLint> textureImages(textureImagesArray, textureImagesArray + 2);
- 
+    // Construímos a representação de objetos geométricos através de malhas de triângulos
     const glm::vec3 Ka = glm::vec3(0.02f, 0.02f, 0.02f);
     const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
     const float q = 30;
 
-    // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel sphereModel("../../data/sphere.obj");
-    ComputeNormals(&sphereModel);
-    Shape sphereShape(sphereModel, "the_sphere");
+    ObjModel spheremodel("../../data/sphere.obj");
+    ComputeNormals(&spheremodel);
+    Shape sphereShape(spheremodel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
         g_phong_gpu_program_proj_esfer_id,
-        textureImages,
-        Ka, Ks, q);
+        {0},
+        Ka, Ks, q
+    );
 
-    ObjModel bunnyModel("../../data/bunny.obj");
-    ComputeNormals(&bunnyModel);
-    Shape bunnyShape(bunnyModel, "the_bunny");
+    ObjModel bunnymodel("../../data/bunny.obj");
+    ComputeNormals(&bunnymodel);
+    Shape bunnyShape(bunnymodel, "the_bunny");
     SceneObject bunnyObject(
         bunnyShape,
         g_phong_gpu_program_proj_planar_id,
-        textureImages,
-        Ka, Ks, q);
+        {0},
+        Ka, Ks, q
+    );
 
-    ObjModel planeModel("../../data/plane.obj");
-    ComputeNormals(&planeModel);
-    Shape planeShape(planeModel, "the_plane");
+    ObjModel planemodel("../../data/plane.obj");
+    ComputeNormals(&planemodel);
+    Shape planeShape(planemodel, "the_plane");
     SceneObject planeObject(
         planeShape,
         g_phong_gpu_program_id,
-        textureImages,
-        Ka, Ks, q);
+        {0},
+        Ka, Ks, q
+    );
+
+    ObjModel rocketmodel("../../data/rocket_tower.obj");
+    ComputeNormals(&rocketmodel);
+    Shape rocketShape(rocketmodel, "the_rocket_tower");
+    SceneObject rocketObject(
+        rocketShape,
+        g_phong_gpu_program_id,
+        {1},
+        Ka, Ks, q
+    );
+
+    ObjModel farmmodel("../../data/farm.obj");
+    ComputeNormals(&farmmodel);
+    Shape farmShape(farmmodel, "the_farm");
+    SceneObject farmObject(
+        farmShape,
+        g_phong_gpu_program_id,
+        {3},
+        Ka, Ks, q
+    );
+
+    ObjModel cannonmodel("../../data/cannon_tower.obj");
+    ComputeNormals(&cannonmodel);
+    Shape cannonShape(cannonmodel, "the_cannon_tower");
+    SceneObject cannonObject(
+        cannonShape,
+        g_phong_gpu_program_id,
+        {4},
+        Ka, Ks, q
+    );
+
+    ObjModel mortarmodel("../../data/mortar_tower.obj");
+    ComputeNormals(&mortarmodel);
+    Shape mortarShape(mortarmodel, "the_mortar_tower");
+    SceneObject mortarObject(
+        mortarShape,
+        g_phong_gpu_program_id,
+        {5},
+        Ka, Ks, q
+    );
+
+    ObjModel slowmodel("../../data/slow_tower.obj");
+    ComputeNormals(&slowmodel);
+    Shape slowShape(slowmodel, "the_slow_tower");
+    SceneObject slowObject(
+        slowShape,
+        g_phong_gpu_program_id,
+        {7},
+        Ka, Ks, q
+    );
+
+    ObjModel portalmodel("../../data/portal.obj");
+    ComputeNormals(&portalmodel);
+    Shape portalShape(portalmodel, "the_portal");
+    SceneObject portalObject(
+        portalShape,
+        g_phong_gpu_program_id,
+        {8},
+        Ka, Ks, q
+    );
+
+    ObjModel castlemodel("../../data/castle.obj");
+    ComputeNormals(&castlemodel);
+    Shape castleShape(castlemodel, "the_castle");
+    SceneObject castleObject(
+        castleShape,
+        g_phong_gpu_program_id,
+        {9},
+        Ka, Ks, q
+    );
 
     ObjModel *extraModel;
     Shape *extraShape;
@@ -228,8 +598,11 @@ int main(int argc, char* argv[]) {
         extraModel = new ObjModel(argv[1]);
         extraShape = new Shape(*extraModel, argv[2]);
         extraObject = new SceneObject(
-            *extraShape, argv[3], argv[4], textureImages,
-            Ka, Ks, q);
+            *extraShape,
+            argv[3], argv[4],
+            {0},
+            Ka, Ks, q
+        );
     }
 
     // Inicializamos o código para renderização de texto.
@@ -243,8 +616,65 @@ int main(int argc, char* argv[]) {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
+    SetupGame();
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window)) {
+        // Computamos a posição da câmera utilizando coordenadas esféricas
+        float current_time = (float)glfwGetTime();
+        delta_t = current_time - prev_time;
+        prev_time = current_time;
+
+        if (g_isRoundActive) {
+            static float spawnTimer = 1.0f; // Timer para controlar a velocidade de spawn
+            spawnTimer -= delta_t;
+            
+            if (spawnTimer <= 0.0f && g_enemiesToSpawnForRound > 0) {
+                // Cria um novo inimigo
+                auto newEnemy = std::unique_ptr<Enemy>(new Enemy(
+                    g_enemyPath->getStartPoint(),
+                    0.5f, 
+                    100.0f + g_currentRound * 20, // Vida aumenta com os rounds
+                    3.0f,
+                    EnemyAttribute::RESISTANT,
+                    10 + g_currentRound * 2,      // Recompensa aumenta com os rounds
+                    std::unique_ptr<BezierMovement>(new BezierMovement(g_enemyPath))
+                ));
+                g_enemyManager.spawn(std::move(newEnemy));
+                
+                spawnTimer = 1.5f; // Reseta o timer para o próximo spawn
+                g_enemiesToSpawnForRound--;
+            }
+
+            int finished_count = g_enemyManager.updateAll(delta_t, g_playerMoney);
+            if (finished_count > 0) {
+                g_playerLives -= finished_count;
+                printf("%d inimigo(s) alcancaram a base! Vidas restantes: %d\n", finished_count, g_playerLives);
+            }
+
+            if (g_playerLives <= 0) {
+                ResetGame();
+            }
+
+            auto enemy_pointers = g_enemyManager.getEnemyPointers();
+
+            // Atualiza a lógica de todas as torres (mirar e atirar)
+            for(const auto& tower : g_towers) {
+                tower->update(delta_t, enemy_pointers);
+            }
+
+            if (enemy_pointers.empty() && g_enemiesToSpawnForRound == 0) {
+                g_isRoundActive = false;
+                g_intermissionTimer = 10.0f; // Começa a contagem para o próximo round
+                printf("Round %d concluido!\n", g_currentRound);
+                for(const auto& tower : g_towers) {
+                    tower->updateEndOfRound(g_playerMoney);
+                }
+            }
+        } else { // Pausa entre os rounds
+            g_intermissionTimer -= delta_t;
+        }
+
         // Aqui executamos as operações de renderização
 
         // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
@@ -259,83 +689,348 @@ int main(int argc, char* argv[]) {
         // e também resetamos todos os pixels do Z-buffer (depth buffer).
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
-        // os shaders de vértice e fragmentos).
-        // glUseProgram(g_GpuProgramID);
+        glm::mat4 view;
+        glm::vec4 camera_position_c;
+        glm::vec4 camera_view_vector;
+        glm::vec4 camera_up_vector = glm::vec4(0.0f,1.0f,0.0f,0.0f);
 
-        // Computamos a posição da câmera utilizando coordenadas esféricas.  As
-        // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
-        // controladas pelo mouse do usuário. Veja as funções CursorPosCallback()
-        // e ScrollCallback().
-        float r = g_CameraDistance;
-        float y = r*sin(g_CameraPhi);
-        float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
-        float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+        if (g_cameraMode == CameraMode::TOWER_FOV && g_selectedTower != nullptr) {
+            glm::vec3 tower_pos = g_selectedTower->pos;
+            float tower_rotation_y = g_selectedTower->currentYRotation;
 
-        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-        // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
-        glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
-        glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
-        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+            // A posição final da câmera é calculada subtraindo o deslocamento que criamos da posição da torre
+            // com 4 unidades para trás e 2 unidades para cima.
 
-        // Computamos a matriz "View" utilizando os parâmetros da câmera para
-        // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+            glm::vec3 offset = glm::vec3(sin(tower_rotation_y) * 4.0f, -2.0f, cos(tower_rotation_y) * 4.0f);
+            camera_position_c = glm::vec4(tower_pos - offset, 1.0f);
+            glm::vec4 camera_lookat_l = glm::vec4(tower_pos, 1.0f);
+            camera_view_vector = camera_lookat_l - camera_position_c;
+        } else {
+            // MODO 2: CÂMERA ORBITAL COM MOVIMENTO WASD
+            float r = g_CameraDistance;
+            float y = r*sin(g_CameraPhi);
+            float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+            float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+            
+            camera_position_c = glm::vec4(x, y, z, 1.0f);
+            glm::vec4 camera_lookat_l = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+            camera_view_vector = camera_lookat_l - camera_position_c;
+            glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f);
 
-        // Agora computamos a matriz de Projeção.
+            glm::vec4 w = -camera_view_vector / norm(camera_view_vector);
+            glm::vec4 u = crossproduct(camera_up_vector, w);
+            
+            if (press_W) g_camera_position_c -= w * delta_t * speed;
+            if (press_S) g_camera_position_c += w * delta_t * speed;
+            if (press_A) g_camera_position_c -= u * delta_t * speed;
+            if (press_D) g_camera_position_c += u * delta_t * speed;
+
+            camera_position_c = g_camera_position_c;
+        }
+        
+        view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
         glm::mat4 projection;
-
-        // Note que, no sistema de coordenadas da câmera, os planos near e far
-        // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
-        float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane" 
+        float nearplane = -0.1f;
+        float farplane  = -299.0f;
 
         if (g_UsePerspectiveProjection) {
-            // Projeção Perspectiva.
-            // Para definição do field of view (FOV), veja slides 205-215 do documento Aula_09_Projecoes.pdf.
             float field_of_view = 3.141592 / 3.0f;
             projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         } else {
-            // Projeção Ortográfica.
-            // Para definição dos valores l, r, b, t ("left", "right", "bottom", "top"),
-            // PARA PROJEÇÃO ORTOGRÁFICA veja slides 219-224 do documento Aula_09_Projecoes.pdf.
-            // Para simular um "zoom" ortográfico, computamos o valor de "t"
-            // utilizando a variável g_CameraDistance.
-            float t = 1.5f*g_CameraDistance/2.5f;
+            float t = 1.5f * g_CameraDistance / 2.5f;
             float b = -t;
-            float r = t*g_ScreenRatio;
+            float r = t * g_ScreenRatio;
             float l = -r;
-            projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
+            projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane); // Os planos são positivos aqui
         }
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
+        g_view_matrix = view;
+        g_projection_matrix = projection;
 
         const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
         const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
         const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
+        glDepthFunc(GL_LEQUAL); 
+        model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z) 
+              * Matrix_Scale(95.0f, 95.0f, 95.0f);
+        sphereObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+        glDepthFunc(GL_LESS); 
+
+        float path_length = g_enemyPath->getTotalLength();
+        float stamp_spacing = 1.5f; // Distância entre cada carimbo de textura
+        float stamp_size = 2.5f;    // Tamanho de cada carimbo
+
+        // Percorre o caminho, desenhando um carimbo a cada 'stamp_spacing' unidades
+        for (float dist = 0; dist < path_length; dist += stamp_spacing) {
+            // Pega o parâmetro 't' e a posição 3D para a distância atual
+            float t = g_enemyPath->getTForDistance(dist);
+            glm::vec3 position = g_enemyPath->getPoint(t);
+
+            // Calcula a direção do caminho nesse ponto para orientar o carimbo
+            glm::vec3 tangent = glm::normalize(g_enemyPath->getPoint(t + 0.01f) - position);
+            float path_angle = atan2(tangent.x, tangent.z);
+
+            float rotation = 6.28f; 
+            float offset_x = 0.5f;
+            float offset_z = 0.5f;
+
+            position.x += offset_x;
+            position.z += offset_z;
+
+            // Cria a matriz 'model' para este carimbo específico
+            model = Matrix_Translate(position.x, position.y - 0.3f, position.z)
+                  * Matrix_Rotate_Y(path_angle + rotation)
+                  * Matrix_Scale(stamp_size, stamp_size, stamp_size);
+                
+            // Desenha um único "pedaço de terra"
+            planeObject.draw(
+                model, view, projection,
+                light_source, light_color, ambient_color
+            );
+        }
+
+        // Portal
+        glm::vec3 portal_pos = g_enemyPath->getStartPoint();
+        glm::vec3 portal_tangent = glm::normalize(g_enemyPath->getPoint(0.01f) - portal_pos);
+        float portal_angle = atan2(portal_tangent.x, portal_tangent.z);
+
+        model = Matrix_Translate(portal_pos.x, 0.0f, portal_pos.z)
+              * Matrix_Rotate_Y(-portal_angle); 
+        portalObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Castelo
+        glm::vec3 castle_pos = g_enemyPath->getEndPoint();
+        glm::vec3 castle_tangent = glm::normalize(castle_pos - g_enemyPath->getPoint(0.99f));
+        float castle_angle = atan2(castle_tangent.x, castle_tangent.z);
+
+        model = Matrix_Translate(castle_pos.x, 0.2f, castle_pos.z)
+                * Matrix_Scale (2.0f, 2.0f, 2.0f)
+                * Matrix_Rotate_Y(-castle_angle);
+        castleObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
         // Desenhamos o modelo da esfera
-        model = Matrix_Translate(-1.0f, 0.0f, 0.0f)
+        model = Matrix_Translate(-1.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         sphereObject.draw(
             model, view, projection,
-            light_source, light_color, ambient_color);
-
-        // Desenhamos o modelo do coelho
-        model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        bunnyObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color);
+            light_source, light_color, ambient_color
+        );
 
         // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f);
+        // Desenha o chão
+        model = Matrix_Translate(0.0f, -1.5f, 0.0f)
+              * Matrix_Scale(25.0f, 1.0f, 25.0f);
         planeObject.draw(
             model, view, projection,
-            light_source, light_color, ambient_color);
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos a Torre de foguete
+        model = Matrix_Translate(2.0f,0.0f,0.0f);
+        rocketObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos a Torre da Fazenda
+        model = Matrix_Translate(4.0f,0.0f,0.0f);
+        farmObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos a Torre de Canhão
+        model = Matrix_Translate(6.0f,0.0f,0.0f);
+        cannonObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos a Torre de Morteiro
+        model = Matrix_Translate(8.0f,0.0f,0.0f);
+        mortarObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos a Torre Slow
+        model = Matrix_Translate(10.0f,0.0f,0.0f);
+        slowObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Desenhamos o castelo
+        model = Matrix_Translate(14.0f,0.0f,0.0f);
+        castleObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
+        // Loop que desenha torre ao comprar
+        for (const auto& tower : g_towers) {
+            // Pega a posição da torre
+            model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z)
+                  * Matrix_Rotate_Y(tower->currentYRotation); 
+            
+            // Define o ID para o shader saber como colorir/texturizar
+            if (tower->blueprintName.find("CannonTower_V1") != std::string::npos || tower->blueprintName.find("CannonTower_V2") != std::string::npos) {
+                cannonObject.draw(
+                    view, model, projection,
+                    light_source, light_color, ambient_color
+                );
+            } else if (tower->blueprintName == "Farm") {
+                farmObject.draw(
+                    view, model, projection,
+                    light_source, light_color, ambient_color
+                );
+            } else if (tower->blueprintName == "RocketTower") {
+                rocketObject.draw(
+                    view, model, projection,
+                    light_source, light_color, ambient_color
+                );
+            } else if (tower->blueprintName == "MortarTower") {
+                mortarObject.draw(
+                    view, model, projection,
+                    light_source, light_color, ambient_color
+                );
+            } else if (tower->blueprintName == "SlowTower") {
+                slowObject.draw(
+                    view, model, projection,
+                    light_source, light_color, ambient_color
+                );
+            } 
+        }
+
+        auto enemy_pointers = g_enemyManager.getEnemyPointers();
+
+        // Percorre a lista de inimigos e desenha cada um
+        for (const auto* enemy : g_enemyManager.getEnemyPointers()) {
+            // --- LÓGICA DE ANIMAÇÃO DE FLUTUAÇÃO (BOBBING) ---
+            float time = (float)glfwGetTime();
+
+            // Parâmetros da animação (você pode ajustar para mudar o efeito)
+            float bobbing_speed = 4.0f;  // Quão rápido o inimigo oscila para cima e para baixo
+            float bobbing_height = 0.1f; // Quão alto o inimigo sobe e desce
+
+            // Calcula o deslocamento vertical usando a função seno
+            float y_offset = sin(time * bobbing_speed) * bobbing_height;
+
+            // Posição base do inimigo
+            glm::vec3 enemy_pos = enemy->hitbox.center;
+
+            // Cria a matriz 'model' com a posição base + o deslocamento da animação
+            model = Matrix_Translate(enemy_pos.x, enemy_pos.y + y_offset, enemy_pos.z)
+                  * Matrix_Scale(enemy->hitbox.radius, enemy->hitbox.radius, enemy->hitbox.radius);
+
+            bunnyObject.draw(
+                model, view, projection,
+                light_source, light_color, ambient_color
+            );
+        }
+
+        // desenha o range da torre
+        if (g_selectedTower != nullptr) {
+            // Habilita a transparência
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            
+            // Posição da esfera é o centro da torre selecionada
+            model = Matrix_Translate(g_selectedTower->pos.x, g_selectedTower->pos.y, g_selectedTower->pos.z)
+                    * Matrix_Scale(g_selectedTower->range, g_selectedTower->range, g_selectedTower->range);
+            
+            // CORREÇÃO: Desenha a geometria da esfera em vez do plano
+            sphereObject.draw(
+                model, view, projection,
+                light_source, light_color, ambient_color
+            );
+            
+            // Desabilita a transparência para não afetar outros objetos
+            glDisable(GL_BLEND);
+        }
+
+
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "Dinheiro: %.0f", g_playerMoney);
+        TextRendering_PrintString(window, buffer, -0.95f, 0.95f);
+        snprintf(buffer, sizeof(buffer), "Vida: %d", g_playerLives);
+        TextRendering_PrintString(window, buffer, -0.95f, 0.90f);
+        snprintf(buffer, sizeof(buffer), "Round: %d", g_currentRound);
+        TextRendering_PrintString(window, buffer, -0.95f, 0.85f);
+
+        if (!g_isRoundActive && g_currentRound < g_totalRounds) {
+            snprintf(buffer, sizeof(buffer), "Pressione 'G' para iniciar o Round %d", g_currentRound + 1);
+            TextRendering_PrintString(window, buffer, -0.4f, 0.0f);
+        }
+
+        // selecionamento da torre
+        if (g_selectedTower) {
+            float text_y = -0.40f;
+            float line_height = 0.05f;
+
+           // Mostra o nome da torre
+            snprintf(buffer, sizeof(buffer), "Torre Selecionada: %s", g_selectedTower->blueprintName.c_str());
+            TextRendering_PrintString(window, buffer, -0.95f, text_y);
+
+            // Verifica se a torre pode atacar para mostrar Dano, Cooldown e Foco
+            if (g_selectedTower->shooting) {
+                
+                // Mostra o Range
+                snprintf(buffer, sizeof(buffer), "- Range: %.1f", g_selectedTower->range);
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - line_height);
+            
+                // Mostra o Cooldown
+                snprintf(buffer, sizeof(buffer), "- Cooldown: %.1f", g_selectedTower->cooldown);
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
+
+                // Mostra o Dano
+                std::string damage_info = g_selectedTower->shooting->getDamageInfo();
+                snprintf(buffer, sizeof(buffer), "- Dano: %s", damage_info.c_str());
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - 3*line_height);
+
+                // MOSTRA O FOCO ATUAL DA TORRE
+                if (g_selectedTower->targeting) {
+                    std::string mode_info = g_selectedTower->targeting->getModeName();
+                    snprintf(buffer, sizeof(buffer), "- Foco: %s", mode_info.c_str());
+                    TextRendering_PrintString(window, buffer, -0.95f, text_y - 4*line_height);
+                }
+            } else if (g_selectedTower->passiveAbility) { // Se for uma torre passiva (Farm), mostra sua habilidade
+                std::string passive_info = g_selectedTower->passiveAbility->getInfo();
+                snprintf(buffer, sizeof(buffer), "- Habilidade: %s", passive_info.c_str());
+                TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
+            }
+
+            const auto& current_bp = g_shop.getBlueprint(g_selectedTower->blueprintName);
+            if (current_bp && !current_bp->nextUpgradeName.empty()) {
+                //  Se houver um upgrade, pega o custo dele
+                const auto& next_bp = g_shop.getBlueprint(current_bp->nextUpgradeName);
+                if (next_bp) {
+                    snprintf(buffer, sizeof(buffer), "[U] - Upgrade (Custo: %d)", current_bp->upgradeCost);
+                    TextRendering_PrintString(window, buffer, -0.95f, text_y - 5 * line_height);
+                }
+            } else {
+                TextRendering_PrintString(window, "[U] - Upgrade (Nivel Maximo)", -0.95f, text_y - 5 * line_height);
+            }
+
+            TextRendering_PrintString(window, "[V] - Vender", -0.95f, text_y - 6*line_height);
+            TextRendering_PrintString(window, "[F] - Ver da Torre", -0.95f, text_y - 7*line_height);
+            TextRendering_PrintString(window, "[Q] - Mudar Foco", -0.95f, text_y - 8*line_height);
+        }
+
+
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -364,7 +1059,6 @@ int main(int argc, char* argv[]) {
         // pela biblioteca GLFW.
         glfwPollEvents();
     }
-
     // Finalizamos o uso dos recursos do sistema operacional
     glfwTerminate();
 
@@ -379,10 +1073,9 @@ void PushMatrix(glm::mat4 M) {
 
 // Função que remove a matriz atualmente no topo da pilha e armazena a mesma na variável M
 void PopMatrix(glm::mat4& M) {
-    if ( g_MatrixStack.empty() ) {
+    if (g_MatrixStack.empty()) {
         M = Matrix_Identity();
-    }
-    else {
+    } else {
         M = g_MatrixStack.top();
         g_MatrixStack.pop();
     }
@@ -410,9 +1103,18 @@ void LoadContext() {
     g_phong_gpu_program_proj_esfer_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_esfer_id);
     g_phong_gpu_program_proj_planar_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_planar_id);
 
-    // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg", 0);
+    // Carregamos as imagens para serem utilizadas como textura
+    LoadTextureImage("../../data/grama.jpg", 0);
     LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif", 1);
+    LoadTextureImage("../../data/rocket_tower.jpg", 2);
+    LoadTextureImage("../../data/farm.jpg", 3);
+    LoadTextureImage("../../data/cannon_tower.jpg", 4);
+    LoadTextureImage("../../data/mortar_tower.jpg", 5);
+    LoadTextureImage("../../data/ceu.jpg", 6);
+    LoadTextureImage("../../data/slow_tower.jpg", 7);
+    LoadTextureImage("../../data/portal.jpg", 8);
+    LoadTextureImage("../../data/castle.jpg", 9);
+    LoadTextureImage("../../data/caminho.jpg", 10);
 }
 
 void UnloadContext() {
@@ -471,6 +1173,49 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
         // com o botão esquerdo pressionado.
         glfwGetCursorPos(window, &g_LastCursorPosX, &g_LastCursorPosY);
         g_LeftMouseButtonPressed = true;
+        glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
+        
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
+        float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height;
+        
+        glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
+        glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
+        ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+        
+        glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
+
+        // 2. Itera por todas as torres para ver se o raio colide com alguma
+        Tower* clicked_tower = nullptr;
+        float closest_intersection = std::numeric_limits<float>::infinity();
+
+        for (const auto& tower : g_towers) {
+            // Teste de interseção Raio-Esfera (hitbox da torre)
+            float radius = 1.0f; // Raio da hitbox da torre (pode ser definido no blueprint)
+            glm::vec3 oc = ray_origin - tower->pos;
+            float a = dot(ray_world_dir, ray_world_dir);
+            float b = 2.0 * dot(oc, ray_world_dir);
+            float c = dot(oc, oc) - radius*radius;
+            float discriminant = b*b - 4*a*c;
+
+            if (discriminant >= 0) {
+                float t = (-b - sqrt(discriminant)) / (2.0f * a);
+                if (t < closest_intersection) {
+                    closest_intersection = t;
+                    clicked_tower = tower.get();
+                }
+            }
+        }
+        
+        // 3. Atualiza a torre selecionada
+        g_selectedTower = clicked_tower;
+
+        if (g_selectedTower) {
+            printf("Torre '%s' selecionada!\n", g_selectedTower->blueprintName.c_str());
+        } else {
+            printf("Nenhuma torre selecionada.\n");
+        }
     }
 
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
@@ -520,6 +1265,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     // instante de tempo, e usamos esta movimentação para atualizar os
     // parâmetros que definem a posição da câmera dentro da cena virtual.
     // Assim, temos que o usuário consegue controlar a câmera.
+    g_cursor_x = xpos;
+    g_cursor_y = ypos;
 
     if (g_LeftMouseButtonPressed) {
         // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
@@ -545,6 +1292,37 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
         g_LastCursorPosX = xpos;
         g_LastCursorPosY = ypos;
     }
+
+    if (g_RightMouseButtonPressed) {
+        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
+        float dx = xpos - g_LastCursorPosX;
+        float dy = ypos - g_LastCursorPosY;
+    
+        // Atualizamos parâmetros da antebraço com os deslocamentos
+        g_ForearmAngleZ -= 0.01f*dx;
+        g_ForearmAngleX += 0.01f*dy;
+    
+        // Atualizamos as variáveis globais para armazenar a posição atual do
+        // cursor como sendo a última posição conhecida do cursor.
+        g_LastCursorPosX = xpos;
+        g_LastCursorPosY = ypos;
+    }
+
+    if (g_MiddleMouseButtonPressed) {
+        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
+        float dx = xpos - g_LastCursorPosX;
+        float dy = ypos - g_LastCursorPosY;
+    
+        // Atualizamos parâmetros da antebraço com os deslocamentos
+        g_TorsoPositionX += 0.01f*dx;
+        g_TorsoPositionY -= 0.01f*dy;
+    
+        // Atualizamos as variáveis globais para armazenar a posição atual do
+        // cursor como sendo a última posição conhecida do cursor.
+        g_LastCursorPosX = xpos;
+        g_LastCursorPosY = ypos;
+    }
+
 }
 
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
@@ -595,7 +1373,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_Y && action == GLFW_PRESS) {
         g_AngleY += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
-
     if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
         g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
@@ -605,6 +1382,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_AngleX = 0.0f;
         g_AngleY = 0.0f;
         g_AngleZ = 0.0f;
+        g_ForearmAngleX = 0.0f;
+        g_ForearmAngleZ = 0.0f;
+        g_TorsoPositionX = 0.0f;
+        g_TorsoPositionY = 0.0f;
     }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
@@ -625,15 +1406,173 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Se o usuário apertar a tecla R, recarregamos os shaders dos arquivos "shader_fragment.glsl" e "shader_vertex.glsl".
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         UnloadContext();
-        
         LoadContext();
 
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
     }
+
+    if (key == GLFW_KEY_W) {
+        if (action == GLFW_PRESS)
+            press_W = true;
+        else if (action == GLFW_RELEASE)
+            press_W = false;
+    }
+
+    if (key == GLFW_KEY_S) {
+        if (action == GLFW_PRESS)
+            press_S = true;
+        else if (action == GLFW_RELEASE)
+            press_S = false;
+    }
+
+    if (key == GLFW_KEY_A) {
+        if (action == GLFW_PRESS)
+            press_A = true;
+        else if (action == GLFW_RELEASE)
+            press_A = false;
+    }
+
+    if (key == GLFW_KEY_D) {
+        if (action == GLFW_PRESS)
+            press_D = true;
+        else if (action == GLFW_RELEASE)
+            press_D = false;
+    }
+
+    // a tecla G inicia um round
+    if (key == GLFW_KEY_G && action == GLFW_PRESS && !g_isRoundActive) {
+        g_isRoundActive = true;
+        g_currentRound++;
+        g_enemiesToSpawnForRound = 5 + g_currentRound * 2;
+        printf("Iniciando Round %d com %d inimigos!\n", g_currentRound, g_enemiesToSpawnForRound);
+    }
+
+    if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        printf("%.1f, %.1f, %.1f",pos.x, pos.y, pos.z);
+        if (pos.y > -998.0f)
+        {
+            auto new_tower = g_shop.buy("CannonTower_V1", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Canhão comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f) {
+            auto new_tower = g_shop.buy("Farm", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Farm comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f) {
+            auto new_tower = g_shop.buy("RocketTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f) {
+            auto new_tower = g_shop.buy("MortarTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+
+    if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
+        glm::vec3 pos = GetCursorWorldPosition(window);
+        if (pos.y > -998.0f) {
+            auto new_tower = g_shop.buy("SlowTower", g_playerMoney, pos);
+            if (new_tower) {
+                g_towers.push_back(std::move(new_tower));
+                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+            } else {
+                printf("Dinheiro insuficiente para comprar Canhao!\n");
+            }
+        }
+    }
+   // Pressionar 'V' para vender
+    if (key == GLFW_KEY_V && action == GLFW_PRESS && g_selectedTower) {
+        SellSelectedTower(); // Chama a função que você já tem
+    }
+
+    // Pressionar 'F' para alternar a câmera
+    if (key == GLFW_KEY_F && action == GLFW_PRESS && g_selectedTower) {
+        ToggleTowerFOV(); // Chama a função que você já tem
+    }
+
+    if (key == GLFW_KEY_Q && action == GLFW_PRESS && g_selectedTower != nullptr) {
+        if (g_selectedTower->targeting && !g_targetingFactories.empty()) {
+            // Pega o índice atual e calcula o próximo, dando a volta na lista
+            int nextIndex = (g_selectedTower->targetingModeIndex + 1) % g_targetingFactories.size();
+            
+            // Cria o novo componente de mira usando a fábrica da lista
+            g_selectedTower->targeting = g_targetingFactories[nextIndex]();
+            
+            // Atualiza o índice na torre
+            g_selectedTower->targetingModeIndex = nextIndex;
+
+            printf("Novo modo de foco da torre: %s\n", g_selectedTower->targeting->getModeName().c_str());
+        }
+    }
+
+    if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+        printf("Tentando upgrade da torre '%s'...\n", g_selectedTower->blueprintName.c_str());
+
+        // encontrar o unique_ptr correto no vetor g_towers
+        for (auto& tower_ptr : g_towers) {
+            if (tower_ptr.get() == g_selectedTower) {
+                auto upgraded_tower = g_shop.upgrade(*tower_ptr, g_playerMoney);
+                if (upgraded_tower) {
+                    printf("Upgrade bem-sucedido!\n");
+                    g_selectedTower = upgraded_tower.get();
+                    tower_ptr = std::move(upgraded_tower);
+                } else {
+                    printf("Upgrade falhou! (Sem upgrade disponivel ou dinheiro insuficiente)\n");
+                }
+                break; // Sai do loop 'for' pois já encontramos a torre
+            }
+        }
+    }
+
+    // Pressionar 'ESC' para fechar a janela ou o jogo
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        if (g_isTowerInfoWindowOpen) {
+            g_isTowerInfoWindowOpen = false;
+            g_selectedTower = nullptr;
+            g_cameraMode = CameraMode::ORBIT; // Sempre volta para a câmera normal
+        } else {
+            glfwSetWindowShouldClose(window, GL_TRUE);
+        }
+    }
+
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal
-void ErrorCallback(int error, const char* description) {
+void ErrorCallback(int error, const char* description)
+{
     fprintf(stderr, "ERROR: GLFW: %s\n", description);
 }

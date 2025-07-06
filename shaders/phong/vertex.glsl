@@ -20,6 +20,8 @@ out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
 
+uniform int object_id;
+#define SKYBOX 7 
 void main()
 {
     // A variável gl_Position define a posição final de cada vértice
@@ -34,7 +36,24 @@ void main()
     // deste Vertex Shader, a placa de vídeo (GPU) fará a divisão por W. Veja
     // slides 41-67 e 69-86 do documento Aula_09_Projecoes.pdf.
 
-    gl_Position = projection * view * model * model_coefficients;
+
+    if (object_id == SKYBOX)
+    {
+        // LÓGICA ESPECIAL PARA O SKYBOX:
+        // Pega a matriz view e remove a parte de translação (movimento).
+        mat4 view_sem_translacao = mat4(mat3(view));
+        // A posição final ignora o movimento da câmera, apenas a rotação.
+        gl_Position = projection * view_sem_translacao * model * model_coefficients;
+        // Garante que o skybox seja sempre desenhado no fundo (profundidade máxima).
+        gl_Position.z = gl_Position.w; 
+    }
+    else
+    {
+        // LÓGICA NORMAL PARA TODOS OS OUTROS OBJETOS:
+        // A posição final é calculada normalmente com a câmera completa.
+        gl_Position = projection * view * model * model_coefficients;
+    }
+   
 
     // Como as variáveis acima  (tipo vec4) são vetores com 4 coeficientes,
     // também é possível acessar e modificar cada coeficiente de maneira
