@@ -726,6 +726,16 @@ int main(int argc, char* argv[]) {
         Ka, Ks, q
     );
 
+    ObjModel skyboxModel("../../data/cube.obj");
+    ComputeNormals(&skyboxModel);
+    Shape skyboxShape(skyboxModel, "the_cube");
+    SceneObject skyboxObject(
+        skyboxShape,
+        g_phong_gpu_program_id,
+        {},
+        Ka, Ks, q
+    );
+
     ObjModel *extraModel;
     Shape *extraShape;
     SceneObject *extraObject;
@@ -888,14 +898,15 @@ int main(int argc, char* argv[]) {
         const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
         const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-        glDepthFunc(GL_LEQUAL); 
-        model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z) 
-              * Matrix_Scale(95.0f, 95.0f, 95.0f);
-        sphereObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-        glDepthFunc(GL_LESS); 
+        // TODO deletar
+        // glDepthFunc(GL_LEQUAL); 
+        // model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z) 
+        //       * Matrix_Scale(95.0f, 95.0f, 95.0f);
+        // sphereObject.draw(
+        //     model, view, projection,
+        //     light_source, light_color, ambient_color
+        // );
+        // glDepthFunc(GL_LESS); 
 
         float path_length = g_enemyPath->getTotalLength();
         float stamp_spacing = 1.5f; // Distância entre cada carimbo de textura
@@ -1106,6 +1117,11 @@ int main(int argc, char* argv[]) {
             glDisable(GL_BLEND);
         }
 
+        model = Matrix_Translate(3.0f, 0.0f, 3.0f);
+        skyboxObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
 
         char buffer[100];
         snprintf(buffer, sizeof(buffer), "Dinheiro: %.0f", g_playerMoney);
@@ -1175,8 +1191,6 @@ int main(int argc, char* argv[]) {
             TextRendering_PrintString(window, "[F] - Ver da Torre", -0.95f, text_y - 7*line_height);
             TextRendering_PrintString(window, "[Q] - Mudar Foco", -0.95f, text_y - 8*line_height);
         }
-
-
 
         if (g_ShowInfoText) {
             // Imprimimos na tela os ângulos de Euler que controlam a rotação do
