@@ -490,16 +490,16 @@ int main(int argc, char* argv[]) {
     LoadContext();
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-    const glm::vec3 Ka = glm::vec3(0.02f, 0.02f, 0.02f);
-    const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
-    const float q = 30;
+    const glm::vec3 Ka = glm::vec3(0.1f, 0.1f, 0.1f);
+    const glm::vec3 Ks = glm::vec3(0.0f, 0.0f, 0.0f);
+    const float q = 1;
 
     ObjModel spheremodel("../../data/sphere.obj");
     ComputeNormals(&spheremodel);
     Shape sphereShape(spheremodel, "the_sphere");
     SceneObject sphereObject(
         sphereShape,
-        g_phong_gpu_program_proj_esfer_id,
+        g_gouraud_gpu_program_proj_esfer_id,
         {1},
         Ka, Ks, q
     );
@@ -522,7 +522,7 @@ int main(int argc, char* argv[]) {
         planeShape,
         g_floor_plane_gpu_program_id,
         {0},
-        Ka, Ks, q
+        glm::vec3(0.15f, 0.15f, 0.15f), Ks, q
     );
 
     SceneObject stampObject(
