@@ -462,7 +462,7 @@ void SetupGame() {
 void ResetGame() {
     printf("Fim de Jogo! A base foi destruída. Resetando para o início...\n");
     g_playerLives = 5;
-    g_playerMoney = 500;
+    g_playerMoney = 650;
     g_towers.clear();
     g_enemyManager.clearAll();
     g_currentRound = 0;
