@@ -121,6 +121,7 @@ GLuint g_phong_fragment_shader_proj_esfer_id;
 GLuint g_phong_fragment_shader_proj_planar_id;
 
 GLuint g_floor_plane_fragment_shader_id;
+GLuint g_range_indicator_fragment_shader_id;
 
 GLuint g_gouraud_gpu_program_id;
 GLuint g_gouraud_gpu_program_proj_esfer_id;
@@ -131,6 +132,7 @@ GLuint g_phong_gpu_program_proj_esfer_id;
 GLuint g_phong_gpu_program_proj_planar_id;
 
 GLuint g_floor_plane_gpu_program_id;
+GLuint g_range_indicator_gpu_program_id;
 
 // pos inicial
 glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
@@ -497,12 +499,21 @@ int main(int argc, char* argv[]) {
     ObjModel spheremodel("../../data/sphere.obj");
     ComputeNormals(&spheremodel);
     Shape sphereShape(spheremodel, "the_sphere");
+
     SceneObject sphereObject(
         sphereShape,
         g_gouraud_gpu_program_proj_esfer_id,
         {1},
         Ka, Ks, q
     );
+
+    SceneObject rangeIndicatorObject(
+        sphereShape,
+        g_range_indicator_gpu_program_id,
+        {},
+        Ka, Ks, q
+    );
+
 
     ObjModel bunnymodel("../../data/bunny.obj");
     ComputeNormals(&bunnymodel);
@@ -966,13 +977,13 @@ int main(int argc, char* argv[]) {
             // Habilita a transparência
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            
+
             // Posição da esfera é o centro da torre selecionada
             model = Matrix_Translate(g_selectedTower->pos.x, g_selectedTower->pos.y, g_selectedTower->pos.z)
                     * Matrix_Scale(g_selectedTower->range, g_selectedTower->range, g_selectedTower->range);
             
             // CORREÇÃO: Desenha a geometria da esfera em vez do plano
-            sphereObject.draw(
+            rangeIndicatorObject.draw(
                 model, view, projection,
                 light_source, light_color, ambient_color
             );
@@ -1115,6 +1126,7 @@ void LoadContext() {
     g_phong_fragment_shader_proj_planar_id = LoadShader_Fragment("../../shaders/phong/fragment_proj_planar.glsl");
 
     g_floor_plane_fragment_shader_id = LoadShader_Fragment("../../shaders/floor_plane_fragment.glsl");
+    g_range_indicator_fragment_shader_id = LoadShader_Fragment("../../shaders/range_indicator_fragment.glsl");
 
     g_gouraud_gpu_program_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_id);
     g_gouraud_gpu_program_proj_esfer_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_esfer_id);
@@ -1125,6 +1137,7 @@ void LoadContext() {
     g_phong_gpu_program_proj_planar_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_planar_id);
 
     g_floor_plane_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_floor_plane_fragment_shader_id);
+    g_range_indicator_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_range_indicator_fragment_shader_id);
 
     // Carregamos as imagens para serem utilizadas como textura
     LoadTextureImage("../../data/grama.jpg", 0);
@@ -1148,6 +1161,9 @@ void UnloadContext() {
     glDeleteShader(g_gouraud_fragment_shader_proj_esfer_id);
     glDeleteShader(g_gouraud_fragment_shader_proj_planar_id);
 
+    glDeleteShader(g_floor_plane_fragment_shader_id);
+    glDeleteShader(g_range_indicator_fragment_shader_id);
+
     glDeleteShader(g_phong_fragment_shader_id);
     glDeleteShader(g_phong_fragment_shader_proj_esfer_id);
     glDeleteShader(g_phong_fragment_shader_proj_planar_id);
@@ -1159,6 +1175,9 @@ void UnloadContext() {
     glDeleteProgram(g_phong_gpu_program_id);
     glDeleteProgram(g_phong_gpu_program_proj_esfer_id);
     glDeleteProgram(g_phong_gpu_program_proj_planar_id);
+
+    glDeleteProgram(g_floor_plane_gpu_program_id);
+    glDeleteProgram(g_range_indicator_gpu_program_id);
 }
 
 // Definição da função que será chamada sempre que a janela do sistema
