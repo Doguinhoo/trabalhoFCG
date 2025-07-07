@@ -610,10 +610,10 @@ int main(int argc, char* argv[]) {
     LoadContext();
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-    const glm::vec3 Ka = glm::vec3(0.1f, 0.1f, 0.1f);
-    const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
+    const glm::vec3 Ka = glm::vec3(0.05f, 0.05f, 0.05f);
+    const glm::vec3 Ks = glm::vec3(0.4f, 0.4f, 0.4f);
     const glm::vec3 noKs = glm::vec3(0.0f, 0.0f, 0.0f);
-    const float q = 20;
+    const float q = 80;
     const float noq = 1;
 
     ObjModel spheremodel("../../data/sphere.obj");
@@ -668,7 +668,7 @@ int main(int argc, char* argv[]) {
     Shape rocketShape(rocketmodel, "the_rocket_tower");
     SceneObject rocketObject(
         rocketShape,
-        g_phong_gpu_program_id,
+        g_gouraud_gpu_program_id,
         {2},
         Ka, Ks, q
     );
@@ -690,7 +690,7 @@ int main(int argc, char* argv[]) {
         cannonShape,
         g_phong_gpu_program_id,
         {4},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel mortarmodel("../../data/mortar_tower.obj");
@@ -698,7 +698,7 @@ int main(int argc, char* argv[]) {
     Shape mortarShape(mortarmodel, "the_mortar_tower");
     SceneObject mortarObject(
         mortarShape,
-        g_phong_gpu_program_id,
+        g_gouraud_gpu_program_id,
         {5},
         Ka, Ks, q
     );

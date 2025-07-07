@@ -60,7 +60,7 @@ void main() {
     vec4 h = normalize(v + l);
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImages[0]
-    vec2 tiled_uv = position_world.xz * 0.2; 
+    vec2 tiled_uv = position_world.xz * 0.1; 
     vec3 Kd = texture(TextureImages[0], tiled_uv).rgb;
 
     // Equações de Iluminação
