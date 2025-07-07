@@ -111,6 +111,7 @@ bool g_ShowInfoText = true;
 
 GLuint g_gouraud_vertex_shader_id;
 GLuint g_phong_vertex_shader_id;
+GLuint g_skybox_vertex_shader_id;
 
 GLuint g_gouraud_fragment_shader_id;
 GLuint g_gouraud_fragment_shader_proj_esfer_id;
@@ -122,6 +123,7 @@ GLuint g_phong_fragment_shader_proj_planar_id;
 
 GLuint g_floor_plane_fragment_shader_id;
 GLuint g_range_indicator_fragment_shader_id;
+GLuint g_skybox_fragment_shader_id;
 
 GLuint g_gouraud_gpu_program_id;
 GLuint g_gouraud_gpu_program_proj_esfer_id;
@@ -133,6 +135,7 @@ GLuint g_phong_gpu_program_proj_planar_id;
 
 GLuint g_floor_plane_gpu_program_id;
 GLuint g_range_indicator_gpu_program_id;
+GLuint g_skybox_gpu_program_id;
 
 // pos inicial
 glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
@@ -726,13 +729,12 @@ int main(int argc, char* argv[]) {
         Ka, Ks, q
     );
 
-    ObjModel skyboxModel("../../data/cube.obj");
-    ComputeNormals(&skyboxModel);
-    Shape skyboxShape(skyboxModel, "the_cube");
+    // ObjModel skyboxModel("../../data/cube.obj");
+    // Shape skyboxShape(skyboxModel, "the_cube");
     SceneObject skyboxObject(
-        skyboxShape,
-        g_phong_gpu_program_id,
-        {},
+        sphereShape,
+        g_skybox_gpu_program_id,
+        {11},
         Ka, Ks, q
     );
 
@@ -1097,6 +1099,18 @@ int main(int argc, char* argv[]) {
             );
         }
 
+        // Desenha a skybox
+        glDepthFunc(GL_LEQUAL);
+        glFrontFace(GL_CW);
+        model = Matrix_Identity();
+        // model = Matrix_Translate(3.0f, 0.0f, 3.0f);
+        skyboxObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+        glDepthFunc(GL_LESS);
+        glFrontFace(GL_CCW);
+
         // desenha o range da torre
         if (g_selectedTower != nullptr) {
             // Habilita a transparência
@@ -1116,12 +1130,6 @@ int main(int argc, char* argv[]) {
             // Desabilita a transparência para não afetar outros objetos
             glDisable(GL_BLEND);
         }
-
-        model = Matrix_Translate(3.0f, 0.0f, 3.0f);
-        skyboxObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
 
         char buffer[100];
         snprintf(buffer, sizeof(buffer), "Dinheiro: %.0f", g_playerMoney);
@@ -1246,6 +1254,7 @@ void LoadContext() {
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
     g_gouraud_vertex_shader_id = LoadShader_Vertex("../../shaders/gouraud/vertex.glsl");
     g_phong_vertex_shader_id = LoadShader_Vertex("../../shaders/phong/vertex.glsl");
+    g_skybox_vertex_shader_id = LoadShader_Vertex("../../shaders/skybox/vertex.glsl");
 
     g_gouraud_fragment_shader_id = LoadShader_Fragment("../../shaders/gouraud/fragment.glsl");
     g_gouraud_fragment_shader_proj_esfer_id = LoadShader_Fragment("../../shaders/gouraud/fragment_proj_esfer.glsl");
@@ -1257,6 +1266,7 @@ void LoadContext() {
 
     g_floor_plane_fragment_shader_id = LoadShader_Fragment("../../shaders/floor_plane_fragment.glsl");
     g_range_indicator_fragment_shader_id = LoadShader_Fragment("../../shaders/range_indicator_fragment.glsl");
+    g_skybox_fragment_shader_id = LoadShader_Fragment("../../shaders/skybox/fragment.glsl");
 
     g_gouraud_gpu_program_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_id);
     g_gouraud_gpu_program_proj_esfer_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_esfer_id);
@@ -1268,6 +1278,7 @@ void LoadContext() {
 
     g_floor_plane_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_floor_plane_fragment_shader_id);
     g_range_indicator_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_range_indicator_fragment_shader_id);
+    g_skybox_gpu_program_id = CreateGpuProgram(g_skybox_vertex_shader_id, g_skybox_fragment_shader_id);
 
     // Carregamos as imagens para serem utilizadas como textura
     LoadTextureImage("../../data/grama.jpg", 0);
@@ -1281,11 +1292,13 @@ void LoadContext() {
     LoadTextureImage("../../data/portal.jpg", 8);
     LoadTextureImage("../../data/castle.jpg", 9);
     LoadTextureImage("../../data/caminho.jpg", 10);
+    LoadTextureImage("../../data/skysphere.jpg", 11);
 }
 
 void UnloadContext() {
     glDeleteShader(g_gouraud_vertex_shader_id);
     glDeleteShader(g_phong_vertex_shader_id);
+    glDeleteShader(g_skybox_vertex_shader_id);
 
     glDeleteShader(g_gouraud_fragment_shader_id);
     glDeleteShader(g_gouraud_fragment_shader_proj_esfer_id);
@@ -1293,6 +1306,7 @@ void UnloadContext() {
 
     glDeleteShader(g_floor_plane_fragment_shader_id);
     glDeleteShader(g_range_indicator_fragment_shader_id);
+    glDeleteShader(g_skybox_fragment_shader_id);
 
     glDeleteShader(g_phong_fragment_shader_id);
     glDeleteShader(g_phong_fragment_shader_proj_esfer_id);
@@ -1308,6 +1322,7 @@ void UnloadContext() {
 
     glDeleteProgram(g_floor_plane_gpu_program_id);
     glDeleteProgram(g_range_indicator_gpu_program_id);
+    glDeleteProgram(g_skybox_gpu_program_id);
 }
 
 // Definição da função que será chamada sempre que a janela do sistema
