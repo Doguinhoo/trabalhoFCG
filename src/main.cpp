@@ -154,7 +154,7 @@ bool press_A = false;
 EnemyManager g_enemyManager;
 Shop g_shop;
 std::vector<std::unique_ptr<Tower>> g_towers;
-float g_playerMoney = 500.0f;
+float g_playerMoney = 5000.0f;
 int   g_playerLives = 5; 
 std::shared_ptr<Path> g_enemyPath;
 double g_cursor_x = 0.0;
@@ -277,7 +277,7 @@ void SetupGame() {
     cannonV1_bp.targetingFactory = makeFirst;
     cannonV1_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(25, 0)); };
     cannonV1_bp.passiveFactory = nullptr;
-    cannonV1_bp.upgradeCost = 150;
+    cannonV1_bp.upgradeCost = 100;
     cannonV1_bp.nextUpgradeName = "CannonTower_V2";
     g_shop.registerTower(cannonV1_bp);
 
@@ -289,57 +289,170 @@ void SetupGame() {
     cannonV2_bp.cooldown = 0.6f;
     cannonV2_bp.targetingFactory = makeFirst;
     cannonV2_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(45, 0)); };
-    cannonV2_bp.passiveFactory = nullptr; 
+    cannonV2_bp.passiveFactory = nullptr;
+    cannonV2_bp.upgradeCost = 150;
+    cannonV2_bp.nextUpgradeName = "CannonTower_V3"; 
     g_shop.registerTower(cannonV2_bp);
 
+    TowerBlueprint cannonV3_bp;
+    cannonV3_bp.name = "CannonTower_V3";
+    cannonV3_bp.modelName = "the_cannon_tower";
+    cannonV3_bp.cost = 0;
+    cannonV3_bp.range = 12.5f;
+    cannonV3_bp.cooldown = 0.4f;
+    cannonV3_bp.targetingFactory = makeFirst;
+    cannonV3_bp.shootingFactory = [](){ return std::unique_ptr<ProjectileShot>(new ProjectileShot(70, 0)); };
+    cannonV3_bp.passiveFactory = nullptr; 
+    g_shop.registerTower(cannonV3_bp);
+
     // --- Torre de Foguete ---
-    TowerBlueprint rocket_bp;
-    rocket_bp.name = "RocketTower";
-    rocket_bp.modelName = "the_rocket_tower";
-    rocket_bp.canTargetFlying = true;
-    rocket_bp.cost = 175;
-    rocket_bp.range = 12.0f;
-    rocket_bp.cooldown = 3.0f;
-    rocket_bp.targetingFactory = makeFirst;
-    rocket_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
-    rocket_bp.passiveFactory = nullptr; 
-    g_shop.registerTower(rocket_bp);
+    TowerBlueprint rocketV1_bp;
+    rocketV1_bp.name = "RocketTower_V1";
+    rocketV1_bp.modelName = "the_rocket_tower";
+    rocketV1_bp.canTargetFlying = true;
+    rocketV1_bp.cost = 175;
+    rocketV1_bp.range = 10.0f;
+    rocketV1_bp.cooldown = 3.0f;
+    rocketV1_bp.targetingFactory = makeFirst;
+    rocketV1_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(50.0f, 25.0f, 3.0f)); };
+    rocketV1_bp.passiveFactory = nullptr;
+    rocketV1_bp.upgradeCost = 150;
+    rocketV1_bp.nextUpgradeName = "RocketTower_V2";  
+    g_shop.registerTower(rocketV1_bp);
     
+    TowerBlueprint rocketV2_bp;
+    rocketV2_bp.name = "RocketTower_V2";
+    rocketV2_bp.modelName = "the_rocket_tower";
+    rocketV2_bp.canTargetFlying = true;
+    rocketV2_bp.cost = 0;
+    rocketV2_bp.range = 12.0f;
+    rocketV2_bp.cooldown = 2.7f;
+    rocketV2_bp.targetingFactory = makeFirst;
+    rocketV2_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(75.0f, 30.0f, 3.5f)); };
+    rocketV2_bp.passiveFactory = nullptr; 
+    rocketV2_bp.upgradeCost = 200;
+    rocketV2_bp.nextUpgradeName = "RocketTower_V3"; 
+    g_shop.registerTower(rocketV2_bp);
+
+    TowerBlueprint rocketV3_bp;
+    rocketV3_bp.name = "RocketTower_V3";
+    rocketV3_bp.modelName = "the_rocket_tower";
+    rocketV3_bp.canTargetFlying = true;
+    rocketV3_bp.cost = 0;
+    rocketV3_bp.range = 15.0f;
+    rocketV3_bp.cooldown = 2.5f;
+    rocketV3_bp.targetingFactory = makeFirst;
+    rocketV3_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 50.0f, 4.0f)); };
+    rocketV3_bp.passiveFactory = nullptr;
+    g_shop.registerTower(rocketV3_bp);
+
+
     // --- Torre de Morteiro ---
-    TowerBlueprint mortar_bp;
-    mortar_bp.name = "MortarTower";
-    mortar_bp.modelName = "the_mortar_tower";
-    mortar_bp.cost = 250;
-    mortar_bp.range = 18.0f;
-    mortar_bp.cooldown = 5.0f;
-    mortar_bp.targetingFactory = makeFirst;
-    mortar_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
-    mortar_bp.passiveFactory = nullptr; 
-    g_shop.registerTower(mortar_bp);
+    TowerBlueprint mortarV1_bp;
+    mortarV1_bp.name = "MortarTower_V1";
+    mortarV1_bp.modelName = "the_mortar_tower"; 
+    mortarV1_bp.cost = 250;
+    mortarV1_bp.range = 18.0f;
+    mortarV1_bp.cooldown = 5.0f;
+    mortarV1_bp.targetingFactory = makeFirst; 
+    mortarV1_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(100.0f, 80.0f, 4.0f)); };
+    mortarV1_bp.passiveFactory = nullptr;
+    mortarV1_bp.upgradeCost = 200;
+    mortarV1_bp.nextUpgradeName = "MortarTower_V2";
+    g_shop.registerTower(mortarV1_bp);
+
+
+    TowerBlueprint mortarV2_bp;
+    mortarV2_bp.name = "MortarTower_V2";
+    mortarV2_bp.modelName = "the_mortar_tower"; 
+    mortarV2_bp.cost = 0; 
+    mortarV2_bp.range = 20.0f; 
+    mortarV2_bp.cooldown = 4.5f; 
+    mortarV2_bp.targetingFactory = makeFirst;
+    mortarV2_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(150.0f, 120.0f, 5.0f)); }; 
+    mortarV2_bp.passiveFactory = nullptr;
+    mortarV2_bp.upgradeCost = 350;
+    mortarV2_bp.nextUpgradeName = "MortarTower_V3";
+    g_shop.registerTower(mortarV2_bp);
+    
+
+    TowerBlueprint mortarV3_bp;
+    mortarV3_bp.name = "MortarTower_V3";
+    mortarV3_bp.modelName = "the_mortar_tower";
+    mortarV3_bp.cost = 0;
+    mortarV3_bp.range = 25.0f; 
+    mortarV3_bp.cooldown = 6.0f; 
+    mortarV3_bp.targetingFactory = makeFirst; 
+    mortarV3_bp.shootingFactory = [](){ return std::unique_ptr<SplashDamageShot>(new SplashDamageShot(300.0f, 250.0f, 6.5f)); }; 
+    mortarV3_bp.passiveFactory = nullptr;
+    g_shop.registerTower(mortarV3_bp);
+
 
     // --- Farm de Dinheiro ---
-    TowerBlueprint farm_bp;
-    farm_bp.name = "Farm";
-    farm_bp.modelName = "the_farm";
-    farm_bp.cost = 125;
-    farm_bp.range = 0.0f;
-    farm_bp.cooldown = 0.0f;
-    farm_bp.targetingFactory = nullptr;
-    farm_bp.shootingFactory = nullptr;  
-    farm_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
-    g_shop.registerTower(farm_bp);
+    TowerBlueprint farmV1_bp;
+    farmV1_bp.name = "Farm_V1";
+    farmV1_bp.modelName = "the_farm";
+    farmV1_bp.cost = 125;
+    farmV1_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(50)); };
+    farmV1_bp.upgradeCost = 200;
+    farmV1_bp.nextUpgradeName = "Farm_V2"; 
+    g_shop.registerTower(farmV1_bp);
 
-    // --- NOVA TORRE DE GELO ---
-    TowerBlueprint ice_tower_bp;
-    ice_tower_bp.name = "SlowTower";
-    ice_tower_bp.modelName = "the_slow_tower"; 
-    ice_tower_bp.cost = 50;
-    ice_tower_bp.range = 7.0f;
-    ice_tower_bp.cooldown = 2.5f;
-    ice_tower_bp.targetingFactory = makeFirst;
-    ice_tower_bp.shootingFactory = [](){ return std::unique_ptr<IceShot>(new IceShot(2.0f)); };
-    ice_tower_bp.passiveFactory = nullptr;
-    g_shop.registerTower(ice_tower_bp);
+    TowerBlueprint farmV2_bp;
+    farmV2_bp.name = "Farm_V2"; 
+    farmV2_bp.modelName = "the_farm";
+    farmV2_bp.cost = 0;
+    farmV2_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(120)); }; 
+    farmV2_bp.upgradeCost = 350;
+    farmV2_bp.nextUpgradeName = "Farm_V3"; 
+    g_shop.registerTower(farmV2_bp);
+
+    TowerBlueprint farmV3_bp;
+    farmV3_bp.name = "Farm_V3";
+    farmV3_bp.modelName = "the_farm";
+    farmV3_bp.cost = 0;
+    farmV3_bp.passiveFactory = [](){ return std::unique_ptr<GenerateIncome>(new GenerateIncome(250)); };
+    g_shop.registerTower(farmV3_bp);
+
+
+    // --- Torre de slow ---
+    TowerBlueprint ice_towerV1_bp;
+    ice_towerV1_bp.name = "SlowTower_V1";
+    ice_towerV1_bp.modelName = "the_slow_tower";
+    ice_towerV1_bp.cost = 75;
+    ice_towerV1_bp.range = 7.0f;
+    ice_towerV1_bp.cooldown = 2.0f;
+    ice_towerV1_bp.targetingFactory = makeNearest;
+    ice_towerV1_bp.shootingFactory = [](){ return std::unique_ptr<IceShot>(new IceShot(2.0f)); }; 
+    ice_towerV1_bp.passiveFactory = nullptr;
+    ice_towerV1_bp.upgradeCost = 100;
+    ice_towerV1_bp.nextUpgradeName = "SlowTower_V2";
+    g_shop.registerTower(ice_towerV1_bp);
+
+    TowerBlueprint ice_towerV2_bp;
+    ice_towerV2_bp.name = "SlowTower_V2";
+    ice_towerV2_bp.modelName = "the_slow_tower";
+    ice_towerV2_bp.cost = 0;
+    ice_towerV2_bp.range = 8.0f;
+    ice_towerV2_bp.cooldown = 1.5f; 
+    ice_towerV2_bp.targetingFactory = makeNearest;
+    ice_towerV2_bp.shootingFactory = [](){ return std::unique_ptr<IceShot>(new IceShot(3.0f)); }; 
+    ice_towerV2_bp.passiveFactory = nullptr;
+    ice_towerV2_bp.upgradeCost = 175;
+    ice_towerV2_bp.nextUpgradeName = "SlowTower_V3";
+    g_shop.registerTower(ice_towerV2_bp);
+    
+
+    TowerBlueprint ice_towerV3_bp;
+    ice_towerV3_bp.name = "SlowTower_V3";
+    ice_towerV3_bp.modelName = "the_slow_tower"; 
+    ice_towerV3_bp.cost = 0;
+    ice_towerV3_bp.range = 9.0f;
+    ice_towerV3_bp.cooldown = 1.0f; 
+    ice_towerV3_bp.targetingFactory = makeNearest;
+    ice_towerV3_bp.shootingFactory = [](){ return std::unique_ptr<FullAoeIceShot>(new FullAoeIceShot(2.5f)); }; 
+    ice_towerV3_bp.passiveFactory = nullptr;
+    g_shop.registerTower(ice_towerV3_bp);
 
     printf("Setup do jogo concluído!\n");
 }
@@ -914,30 +1027,31 @@ int main(int argc, char* argv[]) {
         for (const auto& tower : g_towers) {
             // Pega a posição da torre
             model = Matrix_Translate(tower->pos.x, tower->pos.y, tower->pos.z)
+                  // Movimenta a torre na direção do foco do inimigo
                   * Matrix_Rotate_Y(tower->currentYRotation); 
             
             // Define o ID para o shader saber como colorir/texturizar
-            if (tower->blueprintName.find("CannonTower_V1") != std::string::npos || tower->blueprintName.find("CannonTower_V2") != std::string::npos) {
+            if (tower->modelName == "the_cannon_tower") {
                 cannonObject.draw(
                     model, view, projection,
                     light_source, light_color, ambient_color
                 );
-            } else if (tower->blueprintName == "Farm") {
+            } else if (tower->modelName == "the_farm") {
                 farmObject.draw(
                     model, view, projection,
                     light_source, light_color, ambient_color
                 );
-            } else if (tower->blueprintName == "RocketTower") {
+            } else if (tower->modelName == "the_rocket_tower") {
                 rocketObject.draw(
                     model, view, projection,
                     light_source, light_color, ambient_color
                 );
-            } else if (tower->blueprintName == "MortarTower") {
+            } else if (tower->modelName == "the_mortar_tower") {
                 mortarObject.draw(
                     model, view, projection,
                     light_source, light_color, ambient_color
                 );
-            } else if (tower->blueprintName == "SlowTower") {
+            } else if (tower->modelName == "the_slow_tower") {
                 slowObject.draw(
                     model, view, projection,
                     light_source, light_color, ambient_color
@@ -949,12 +1063,12 @@ int main(int argc, char* argv[]) {
 
         // Percorre a lista de inimigos e desenha cada um
         for (const auto* enemy : g_enemyManager.getEnemyPointers()) {
-            // --- LÓGICA DE ANIMAÇÃO DE FLUTUAÇÃO (BOBBING) ---
+            // Efeito de Bobbing no andar do inimigo
             float time = (float)glfwGetTime();
 
-            // Parâmetros da animação (você pode ajustar para mudar o efeito)
-            float bobbing_speed = 4.0f;  // Quão rápido o inimigo oscila para cima e para baixo
-            float bobbing_height = 0.1f; // Quão alto o inimigo sobe e desce
+            // Parâmetros da animação 
+            float bobbing_speed = 4.0f;  
+            float bobbing_height = 0.1f; 
 
             // Calcula o deslocamento vertical usando a função seno
             float y_offset = sin(time * bobbing_speed) * bobbing_height;
@@ -1031,13 +1145,15 @@ int main(int argc, char* argv[]) {
                 snprintf(buffer, sizeof(buffer), "- Dano: %s", damage_info.c_str());
                 TextRendering_PrintString(window, buffer, -0.95f, text_y - 3*line_height);
 
-                // MOSTRA O FOCO ATUAL DA TORRE
+                // Mostra o foco atual da torre
                 if (g_selectedTower->targeting) {
                     std::string mode_info = g_selectedTower->targeting->getModeName();
                     snprintf(buffer, sizeof(buffer), "- Foco: %s", mode_info.c_str());
                     TextRendering_PrintString(window, buffer, -0.95f, text_y - 4*line_height);
                 }
-            } else if (g_selectedTower->passiveAbility) { // Se for uma torre passiva (Farm), mostra sua habilidade
+
+            // Se for uma torre passiva (Farm), mostra sua habilidade
+            } else if (g_selectedTower->passiveAbility) { 
                 std::string passive_info = g_selectedTower->passiveAbility->getInfo();
                 snprintf(buffer, sizeof(buffer), "- Habilidade: %s", passive_info.c_str());
                 TextRendering_PrintString(window, buffer, -0.95f, text_y - 2*line_height);
@@ -1508,7 +1624,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
         glm::vec3 pos = GetCursorWorldPosition(window);
         if (pos.y > -998.0f) {
-            auto new_tower = g_shop.buy("Farm", g_playerMoney, pos);
+            auto new_tower = g_shop.buy("Farm_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Farm comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
@@ -1521,7 +1637,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
         glm::vec3 pos = GetCursorWorldPosition(window);
         if (pos.y > -998.0f) {
-            auto new_tower = g_shop.buy("RocketTower", g_playerMoney, pos);
+            auto new_tower = g_shop.buy("RocketTower_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
@@ -1534,7 +1650,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
         glm::vec3 pos = GetCursorWorldPosition(window);
         if (pos.y > -998.0f) {
-            auto new_tower = g_shop.buy("MortarTower", g_playerMoney, pos);
+            auto new_tower = g_shop.buy("MortarTower_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
@@ -1547,7 +1663,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
         glm::vec3 pos = GetCursorWorldPosition(window);
         if (pos.y > -998.0f) {
-            auto new_tower = g_shop.buy("SlowTower", g_playerMoney, pos);
+            auto new_tower = g_shop.buy("SlowTower_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);

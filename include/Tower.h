@@ -104,6 +104,13 @@ struct IceShot : IShooting {
     std::string getDamageInfo() const override;
 };
 
+struct FullAoeIceShot : IShooting {
+    float slowDuration;
+    FullAoeIceShot(float duration) : slowDuration(duration) {}
+    void fire(Enemy*, Tower&, const std::vector<Enemy*>&) override;
+    std::string getDamageInfo() const override;
+};
+
 struct GenerateIncome : IPassiveAbility {
     int incomePerRound;
     GenerateIncome(int income) : incomePerRound(income) {}

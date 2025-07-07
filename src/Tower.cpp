@@ -217,6 +217,25 @@ void IceShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>&) {
     }
 }
 
+void FullAoeIceShot::fire(Enemy* target, Tower& self, const std::vector<Enemy*>& all_enemies) {
+    Hitbox range = self.rangeHitbox();
+    
+    // Itera por TODOS os inimigos
+    for (auto* enemy : all_enemies) {
+        // Se o inimigo está vivo e dentro do alcance da torre...
+        if (enemy && enemy->alive && range.intersects(enemy->hitbox)) {
+            // ...aplica o efeito de lentidão.
+            enemy->applySlow(slowDuration);
+        }
+    }
+}
+
+std::string FullAoeIceShot::getDamageInfo() const {
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "Lentidao em Area (%.1fs)", slowDuration);
+    return std::string(buffer);
+}
+
 std::string IceShot::getDamageInfo() const {
     return "Lentidao";
 }
