@@ -45,6 +45,7 @@ using namespace std;
 #include "utils.hpp"
 #include "matrices.hpp"
 #include "bezier.hpp"
+#include "collisions.h"
 
 // Headers das estruturas
 #include "EnemyManager.h"
@@ -135,7 +136,8 @@ GLuint g_floor_plane_gpu_program_id;
 GLuint g_range_indicator_gpu_program_id;
 
 // pos inicial
-glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
+glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f);
+glm::vec4 g_camera_position_c_ant =  g_camera_position_c;
 float prev_time = (float)glfwGetTime();
 float delta_t;
 
@@ -154,7 +156,7 @@ bool press_A = false;
 EnemyManager g_enemyManager;
 Shop g_shop;
 std::vector<std::unique_ptr<Tower>> g_towers;
-float g_playerMoney = 5000.0f;
+float g_playerMoney = 750.0f;
 int   g_playerLives = 5; 
 std::shared_ptr<Path> g_enemyPath;
 double g_cursor_x = 0.0;
@@ -469,42 +471,6 @@ void ResetGame() {
     g_cameraMode = CameraMode::ORBIT;
 }
 
-// Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
-glm::vec3 GetCursorWorldPosition(GLFWwindow* window) {
-    // Obtém o tamanho da janela
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-
-    // Converte as coordenadas do cursor (pixels) para Coordenadas Normalizadas de Dispositivo (NDC) [-1, 1]
-    float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
-    float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height; // Y é invertido
-
-    // Define um raio em espaço de recorte (Clip Space)
-    glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
-
-    // Converte o raio do espaço de recorte para o espaço da câmera (Eye Space)
-    glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
-    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0); // Direção para frente
-
-    // Converte o raio do espaço da câmera para o espaço do mundo (World Space)
-    glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
-
-    // Calcula a interseção do raio com o plano do chão (y = -1.0)
-    // Posição da câmera (origem do raio)
-    glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
-    
-    // Se o raio não estiver apontando para baixo, não haverá interseção
-    if (ray_world_dir.y >= 0.0f) {
-        return glm::vec3(0.0f, -999.0f, 0.0f); // Retorna uma posição inválida
-    }
-    
-    // Calcula a distância 't' até a interseção
-    float t = (-1.0f - ray_origin.y) / ray_world_dir.y;
-
-    // Retorna o ponto de interseção
-    return ray_origin + t * ray_world_dir;
-}
-
 void SellSelectedTower() {
     if (!g_selectedTower) return;
 
@@ -535,6 +501,42 @@ void ToggleTowerFOV() {
         g_cameraMode = CameraMode::ORBIT;
         printf("Câmera em modo Orbita.\n");
     }
+}
+
+// Converte a posição 2D do cursor na tela para uma posição 3D no chão do mundo
+glm::vec3 GetCursorWorldPosition(GLFWwindow* window) {
+
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Converte as coordenadas do cursorpara coordenadas normalizadas
+    float x_ndc = (2.0f * (float)g_cursor_x) / width - 1.0f;
+    float y_ndc = 1.0f - (2.0f * (float)g_cursor_y) / height;
+
+    // Define um raio em espaço de recorte
+    glm::vec4 ray_clip = glm::vec4(x_ndc, y_ndc, -1.0, 1.0);
+
+    // Converte o raio do espaço de recorte para o espaço da câmera 
+    glm::vec4 ray_eye = inverse(g_projection_matrix) * ray_clip;
+    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0); 
+
+    // Converte o raio do espaço da câmera para o espaço do mundo 
+    glm::vec3 ray_world_dir = glm::normalize(glm::vec3(inverse(g_view_matrix) * ray_eye));
+
+    // Calcula a interseção do raio com o plano do chão
+    // Posição da câmera 
+    glm::vec3 ray_origin = glm::vec3(inverse(g_view_matrix)[3]);
+    
+    // Se o raio não estiver apontando para baixo, não haverá interseção
+    if (ray_world_dir.y >= 0.0f) {
+        return glm::vec3(0.0f, -999.0f, 0.0f);
+    }
+    
+    // Calcula a distância 't' até a interseção
+    float t = (-1.0f - ray_origin.y) / ray_world_dir.y;
+
+    // Retorna o ponto de interseção
+    return ray_origin + t * ray_world_dir;
 }
 
 int main(int argc, char* argv[]) {
@@ -842,7 +844,7 @@ int main(int argc, char* argv[]) {
             glm::vec4 camera_lookat_l = glm::vec4(tower_pos, 1.0f);
             camera_view_vector = camera_lookat_l - camera_position_c;
         } else {
-            // MODO 2: CÂMERA ORBITAL COM MOVIMENTO WASD
+            // Câmera orbital
             float r = g_CameraDistance;
             float y = r*sin(g_CameraPhi);
             float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
@@ -861,7 +863,15 @@ int main(int argc, char* argv[]) {
             if (press_A) g_camera_position_c -= u * delta_t * speed;
             if (press_D) g_camera_position_c += u * delta_t * speed;
 
-            camera_position_c = g_camera_position_c;
+            bool has_collided = CheckCameraCollision(g_camera_position_c, g_towers, -0.5f, 95.0f, 1.0f);
+            
+            if (!has_collided) {
+                camera_position_c = g_camera_position_c;
+                g_camera_position_c_ant = g_camera_position_c;
+            }else{
+                g_camera_position_c = g_camera_position_c_ant;
+                camera_position_c = g_camera_position_c_ant;
+            }
         }
         
         view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -955,70 +965,10 @@ int main(int argc, char* argv[]) {
             light_source, light_color, ambient_color
         );
 
-        // Desenhamos o modelo da esfera
-        model = Matrix_Translate(-1.0f,0.0f,0.0f)
-              * Matrix_Rotate_Z(0.6f)
-              * Matrix_Rotate_X(0.2f)
-              * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-        sphereObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        bunnyObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos o plano do chão
         // Desenha o chão
         model = Matrix_Translate(0.0f, -1.5f, 0.0f)
               * Matrix_Scale(25.0f, 1.0f, 25.0f);
         floorPlaneObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos a Torre de foguete
-        model = Matrix_Translate(2.0f,0.0f,0.0f);
-        rocketObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos a Torre da Fazenda
-        model = Matrix_Translate(4.0f,0.0f,0.0f);
-        farmObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos a Torre de Canhão
-        model = Matrix_Translate(6.0f,0.0f,0.0f);
-        cannonObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos a Torre de Morteiro
-        model = Matrix_Translate(8.0f,0.0f,0.0f);
-        mortarObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos a Torre Slow
-        model = Matrix_Translate(10.0f,0.0f,0.0f);
-        slowObject.draw(
-            model, view, projection,
-            light_source, light_color, ambient_color
-        );
-
-        // Desenhamos o castelo
-        model = Matrix_Translate(14.0f,0.0f,0.0f);
-        castleObject.draw(
             model, view, projection,
             light_source, light_color, ambient_color
         );

@@ -9,11 +9,6 @@
 
 class Tower;
 
-template<typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 struct ITargeting {
     virtual ~ITargeting() = default;
     virtual Enemy* pick(const std::vector<Enemy*>& enemies, const Tower& self) = 0;

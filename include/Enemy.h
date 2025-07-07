@@ -10,7 +10,6 @@ struct Hitbox {
     glm::vec3 center;
     float     radius;
 
-    // 
     bool intersects(const Hitbox& o) const {
         float r = radius + o.radius;
         glm::vec3 d = center - o.center;

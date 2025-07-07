@@ -6,7 +6,6 @@
 
 Tower::Tower(const std::string& bpName, const std::string& mdlName, const glm::vec3& p, float r, float cd,
              std::unique_ptr<ITargeting> t, std::unique_ptr<IShooting> s, std::unique_ptr<IPassiveAbility> pa)
-    // A lista de inicialização agora cria a hitbox com um raio padrão de 1.0f
     : blueprintName(bpName),
       modelName(mdlName),
       pos(p),
@@ -15,10 +14,7 @@ Tower::Tower(const std::string& bpName, const std::string& mdlName, const glm::v
       cooldown(cd),
       targeting(std::move(t)),
       shooting(std::move(s)),
-      passiveAbility(std::move(pa))
-{
-    // O corpo do construtor pode ficar vazio
-}
+      passiveAbility(std::move(pa)){}
 
 Hitbox Tower::rangeHitbox() const {
     return { pos, range };
@@ -57,7 +53,6 @@ void Tower::updateEndOfRound(float& playerMoney) {
 }
 
 
-// --- Implementações de ITargeting ---
 
 Enemy* NearestTarget::pick(const std::vector<Enemy*>& enemies, const Tower& self) {
     Enemy* best = nullptr;
@@ -168,7 +163,6 @@ Enemy* FlyingPriorityTarget::pick(const std::vector<Enemy*>& enemies, const Towe
 
 std::string FlyingPriorityTarget::getModeName() const { return "Voador"; }
 
-// --- Implementações de IShooting ---
 
 void ProjectileShot::fire(Enemy* target, Tower&, const std::vector<Enemy*>&) {
     if (target) target->applyDamage(damage);
@@ -222,9 +216,9 @@ void FullAoeIceShot::fire(Enemy* target, Tower& self, const std::vector<Enemy*>&
     
     // Itera por TODOS os inimigos
     for (auto* enemy : all_enemies) {
-        // Se o inimigo está vivo e dentro do alcance da torre...
+        // Se o inimigo está vivo e dentro do alcance da torre
         if (enemy && enemy->alive && range.intersects(enemy->hitbox)) {
-            // ...aplica o efeito de lentidão.
+            // aplica o efeito de lentidão.
             enemy->applySlow(slowDuration);
         }
     }
@@ -259,8 +253,6 @@ std::string FullAoeShot::getDamageInfo() const {
     snprintf(buffer, sizeof(buffer), "%d/s", (int)damagePerSecond);
     return std::string(buffer);
 }
-
-// --- Implementações de IPassiveAbility ---
 
 void GenerateIncome::onRoundEnd(Tower& self, float& playerMoney) {
     playerMoney += incomePerRound;
