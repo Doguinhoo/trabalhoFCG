@@ -121,6 +121,7 @@ struct BezierMovement : IMovement {
             e.hitbox.center = caminho->getEndPoint();
             e.reward = 0;
             e.alive = false;
+            e.killedByPlayer = false;
             return;
         }
 

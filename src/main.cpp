@@ -1035,27 +1035,27 @@ int main(int argc, char* argv[]) {
             // Define o ID para o shader saber como colorir/texturizar
             if (tower->modelName == "the_cannon_tower") {
                 cannonObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Translate (0.0f, 0.28f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->modelName == "the_farm") {
                 farmObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Translate (0.0f, 0.2f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->modelName == "the_rocket_tower") {
                 rocketObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Rotate_Y(3.141592f) * Matrix_Translate (0.0f, 0.5f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->modelName == "the_mortar_tower") {
                 mortarObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Translate (0.0f, 0.53f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->modelName == "the_slow_tower") {
                 slowObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Translate(0.0f, 0.8f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 );
             } 
@@ -1082,13 +1082,13 @@ int main(int argc, char* argv[]) {
 
             if (enemy->attribute == EnemyAttribute::RESISTANT) {
                 tankObject.draw(
-                    model, view, projection,
+                    (model * Matrix_Translate(0.0f, 0.33f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 ); 
             }
             else if (enemy->attribute == EnemyAttribute::FAST) {
                 carObject.draw(
-                    (model * Matrix_Rotate_Y(3.141592f/2)), view, projection,
+                    (model * Matrix_Rotate_Y(3.141592f/2) * Matrix_Translate(0.0f, 0.3f, 0.0f)), view, projection,
                     light_source, light_color, ambient_color
                 ); 
             }
