@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "matrices.hpp"
+#include "utils.hpp"
 
 ObjModel::ObjModel(const char* filename, const char* basepath/*  = NULL */, bool triangulate/*  = true */) {
     printf("Carregando objetos do arquivo \"%s\"...\n", filename);
