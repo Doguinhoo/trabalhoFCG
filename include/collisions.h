@@ -10,6 +10,7 @@ bool CheckCameraCollision(
     const glm::vec4& proposed_position,
     const std::vector<std::unique_ptr<Tower>>& towers,
     float floor_height,
+    float ceiling_height,
     float skybox_radius,
     float camera_radius
 );

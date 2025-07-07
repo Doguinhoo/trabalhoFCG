@@ -915,7 +915,7 @@ int main(int argc, char* argv[]) {
             if (press_A) g_camera_position_c -= u * delta_t * speed;
             if (press_D) g_camera_position_c += u * delta_t * speed;
 
-            bool has_collided = CheckCameraCollision(g_camera_position_c, g_towers, -0.5f, 95.0f, 1.0f);
+            bool has_collided = CheckCameraCollision(g_camera_position_c, g_towers, -0.5f, 20.0f, 95.0f, 1.0f);
             
             if (!has_collided) {
                 camera_position_c = g_camera_position_c;

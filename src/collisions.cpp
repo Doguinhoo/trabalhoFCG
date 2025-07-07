@@ -25,6 +25,7 @@ bool CheckCameraCollision(
     const glm::vec4& proposed_position,
     const std::vector<std::unique_ptr<Tower>>& towers,
     float floor_height,
+    float ceiling_height, 
     float skybox_radius,
     float camera_radius)
 {
@@ -33,8 +34,24 @@ bool CheckCameraCollision(
         return true; 
     }
 
+    // Colisão com o teto
+    if (proposed_position.y > ceiling_height) {
+        return true; // Colidiu com o teto
+    }
+
     // Colisão com o Skybox
     if (glm::length(glm::vec3(proposed_position)) > (skybox_radius - camera_radius)) {
+        return true; 
+    }
+    
+    // Colisão com as paredes invisíveis
+    // 24.0f é o largura do chão, e é o limite do mapa
+    const float map_boundary = 24.0f; 
+
+    if (proposed_position.x > map_boundary || proposed_position.x < -map_boundary) {
+        return true; 
+    }
+    if (proposed_position.z > map_boundary || proposed_position.z < -map_boundary) {
         return true; 
     }
 
