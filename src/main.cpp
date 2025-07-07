@@ -728,6 +728,36 @@ int main(int argc, char* argv[]) {
         Ka, Ks, q
     );
 
+    ObjModel carmodel("../../data/car.obj");
+    ComputeNormals(&carmodel);
+    Shape carShape(carmodel, "the_car");
+    SceneObject carObject(
+        carShape,
+        g_phong_gpu_program_id,
+        {11},
+        Ka, Ks, q
+    );
+
+    ObjModel helicoptermodel("../../data/helicopter.obj");
+    ComputeNormals(&helicoptermodel);
+    Shape helicopterShape(helicoptermodel, "the_helicopter");
+    SceneObject helicopterObject(
+        helicopterShape,
+        g_phong_gpu_program_id,
+        {12},
+        Ka, Ks, q
+    );
+
+    ObjModel tankmodel("../../data/tank.obj");
+    ComputeNormals(&tankmodel);
+    Shape tankShape(tankmodel, "the_tank");
+    SceneObject tankObject(
+        tankShape,
+        g_phong_gpu_program_id,
+        {13},
+        Ka, Ks, q
+    );
+
     ObjModel *extraModel;
     Shape *extraShape;
     SceneObject *extraObject;
@@ -764,23 +794,44 @@ int main(int argc, char* argv[]) {
         prev_time = current_time;
 
         if (g_isRoundActive) {
-            static float spawnTimer = 1.0f; // Timer para controlar a velocidade de spawn
+            static float spawnTimer = 1.0f; 
             spawnTimer -= delta_t;
             
-            if (spawnTimer <= 0.0f && g_enemiesToSpawnForRound > 0) {
-                // Cria um novo inimigo
+            if (spawnTimer <= 0.0f && g_enemiesToSpawnForRound > 0)
+            {
+                EnemyAttribute type = EnemyAttribute::RESISTANT; 
+                float health = 100.0f + g_currentRound * 20;
+                float speed = 2.5f;
+                int reward = 10;
+                float y_pos = -1.0f; 
+
+                if (g_enemiesToSpawnForRound % 3 == 0) {
+                    type = EnemyAttribute::FAST;
+                    health *= 0.7f; 
+                    speed *= 1.8f;  
+                    reward = 12;
+                }
+                
+                if (g_enemiesToSpawnForRound % 5 == 0) {
+                    type = EnemyAttribute::FLYING;
+                    health *= 0.8f;
+                    y_pos = 2.0f; 
+                    reward = 15;
+                }
+                
+                // Cria o inimigo com os atributos definidos
                 auto newEnemy = std::unique_ptr<Enemy>(new Enemy(
-                    g_enemyPath->getStartPoint(),
+                    glm::vec3(g_enemyPath->getStartPoint().x, y_pos, g_enemyPath->getStartPoint().z),
                     0.5f, 
-                    100.0f + g_currentRound * 20, // Vida aumenta com os rounds
-                    3.0f,
-                    EnemyAttribute::RESISTANT,
-                    10 + g_currentRound * 2,      // Recompensa aumenta com os rounds
+                    health,
+                    speed,
+                    type,
+                    reward,
                     std::unique_ptr<BezierMovement>(new BezierMovement(g_enemyPath))
                 ));
                 g_enemyManager.spawn(std::move(newEnemy));
                 
-                spawnTimer = 1.5f; // Reseta o timer para o próximo spawn
+                spawnTimer = 1.5f; 
                 g_enemiesToSpawnForRound--;
             }
 
@@ -803,13 +854,14 @@ int main(int argc, char* argv[]) {
 
             if (enemy_pointers.empty() && g_enemiesToSpawnForRound == 0) {
                 g_isRoundActive = false;
-                g_intermissionTimer = 10.0f; // Começa a contagem para o próximo round
+                g_intermissionTimer = 10.0f; 
                 printf("Round %d concluido!\n", g_currentRound);
                 for(const auto& tower : g_towers) {
                     tower->updateEndOfRound(g_playerMoney);
                 }
+                g_playerMoney += 100;
             }
-        } else { // Pausa entre os rounds
+        } else { 
             g_intermissionTimer -= delta_t;
         }
 
@@ -1012,28 +1064,40 @@ int main(int argc, char* argv[]) {
         auto enemy_pointers = g_enemyManager.getEnemyPointers();
 
         // Percorre a lista de inimigos e desenha cada um
-        for (const auto* enemy : g_enemyManager.getEnemyPointers()) {
-            // Efeito de Bobbing no andar do inimigo
+        for (const auto* enemy : g_enemyManager.getEnemyPointers())
+        {
+            // Efeito de bobbing
             float time = (float)glfwGetTime();
-
-            // Parâmetros da animação 
-            float bobbing_speed = 4.0f;  
-            float bobbing_height = 0.1f; 
-
-            // Calcula o deslocamento vertical usando a função seno
+            float bobbing_speed = 2.0f;
+            float bobbing_height = 0.05f;
             float y_offset = sin(time * bobbing_speed) * bobbing_height;
 
             // Posição base do inimigo
             glm::vec3 enemy_pos = enemy->hitbox.center;
 
-            // Cria a matriz 'model' com a posição base + o deslocamento da animação
+            // Cria a matriz 'model' com a posição base + a animação
             model = Matrix_Translate(enemy_pos.x, enemy_pos.y + y_offset, enemy_pos.z)
-                  * Matrix_Scale(enemy->hitbox.radius, enemy->hitbox.radius, enemy->hitbox.radius);
+                  * Matrix_Rotate_Y(enemy->currentYRotation + 3.141592f) 
+                  * Matrix_Scale(enemy->hitbox.radius + 0.5f, enemy->hitbox.radius + 0.5f, enemy->hitbox.radius + 0.5f);
 
-            bunnyObject.draw(
-                model, view, projection,
-                light_source, light_color, ambient_color
-            );
+            if (enemy->attribute == EnemyAttribute::RESISTANT) {
+                tankObject.draw(
+                    model, view, projection,
+                    light_source, light_color, ambient_color
+                ); 
+            }
+            else if (enemy->attribute == EnemyAttribute::FAST) {
+                carObject.draw(
+                    (model * Matrix_Rotate_Y(3.141592f/2)), view, projection,
+                    light_source, light_color, ambient_color
+                ); 
+            }
+            else if (enemy->attribute == EnemyAttribute::FLYING) {
+                helicopterObject.draw(
+                    (model * Matrix_Translate(0.0f, 2.0f, 0.0f) * Matrix_Scale(enemy->hitbox.radius + 1.0f, enemy->hitbox.radius + 1.0f, enemy->hitbox.radius + 1.0f)), 
+                    view, projection, light_source, light_color, ambient_color
+                ); 
+            }
         }
 
         // desenha o range da torre
@@ -1217,6 +1281,9 @@ void LoadContext() {
     LoadTextureImage("../../data/portal.jpg", 8);
     LoadTextureImage("../../data/castle.jpg", 9);
     LoadTextureImage("../../data/caminho.jpg", 10);
+    LoadTextureImage("../../data/car.jpg", 11);
+    LoadTextureImage("../../data/helicopter.jpg", 12);
+    LoadTextureImage("../../data/tank.jpg", 13);
 }
 
 void UnloadContext() {

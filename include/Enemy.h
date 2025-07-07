@@ -45,6 +45,7 @@ public:
     float                      slowTimer = 0.0f;   
     std::unique_ptr<IMovement> movement;
     float                      distanceTraveled = 0.0f;
+    float                      currentYRotation = 0.0f;
     float                      reward;
     
     Enemy(const glm::vec3& pos, float radius, float hp, float speed, EnemyAttribute attr, int rewardValue, std::unique_ptr<IMovement> mv)
@@ -111,16 +112,25 @@ struct BezierMovement : IMovement {
 
     void move(Enemy& e, float dt) override {
         if (!caminho) return;
+
+        // Posição antiga antes de mover
+        glm::vec3 old_pos = e.hitbox.center;
+
         e.distanceTraveled += e.speed() * dt;
         if (e.distanceTraveled >= caminho->getTotalLength()) {
             e.hitbox.center = caminho->getEndPoint();
+            e.reward = 0;
             e.alive = false;
-            e.killedByPlayer = false;                   
-            e.reward = 0; 
-            printf("Um inimigo chegou a base!\n"); 
             return;
         }
+
         float t = caminho->getTForDistance(e.distanceTraveled);
         e.hitbox.center = caminho->getPoint(t);
+        glm::vec3 direction = e.hitbox.center - old_pos;
+
+        //  Se o inimigo se moveu, calcula o ângulo de rotação.
+        if (glm::length(direction) > 0.001f) { 
+            e.currentYRotation = atan2(direction.x, direction.z);
+        }
     }
 };
