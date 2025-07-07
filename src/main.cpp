@@ -120,6 +120,8 @@ GLuint g_phong_fragment_shader_id;
 GLuint g_phong_fragment_shader_proj_esfer_id;
 GLuint g_phong_fragment_shader_proj_planar_id;
 
+GLuint g_floor_plane_fragment_shader_id;
+
 GLuint g_gouraud_gpu_program_id;
 GLuint g_gouraud_gpu_program_proj_esfer_id;
 GLuint g_gouraud_gpu_program_proj_planar_id;
@@ -127,6 +129,8 @@ GLuint g_gouraud_gpu_program_proj_planar_id;
 GLuint g_phong_gpu_program_id;
 GLuint g_phong_gpu_program_proj_esfer_id;
 GLuint g_phong_gpu_program_proj_planar_id;
+
+GLuint g_floor_plane_gpu_program_id;
 
 // pos inicial
 glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
@@ -496,7 +500,7 @@ int main(int argc, char* argv[]) {
     SceneObject sphereObject(
         sphereShape,
         g_phong_gpu_program_proj_esfer_id,
-        {0},
+        {1},
         Ka, Ks, q
     );
 
@@ -510,13 +514,21 @@ int main(int argc, char* argv[]) {
         Ka, Ks, q
     );
 
-    ObjModel planemodel("../../data/plane.obj");
-    ComputeNormals(&planemodel);
-    Shape planeShape(planemodel, "the_plane");
-    SceneObject planeObject(
+    ObjModel planeModel("../../data/plane.obj");
+    ComputeNormals(&planeModel);
+    Shape planeShape(planeModel, "the_plane");
+
+    SceneObject floorPlaneObject(
+        planeShape,
+        g_floor_plane_gpu_program_id,
+        {0},
+        Ka, Ks, q
+    );
+
+    SceneObject stampObject(
         planeShape,
         g_phong_gpu_program_id,
-        {0},
+        {10},
         Ka, Ks, q
     );
 
@@ -526,7 +538,7 @@ int main(int argc, char* argv[]) {
     SceneObject rocketObject(
         rocketShape,
         g_phong_gpu_program_id,
-        {1},
+        {2},
         Ka, Ks, q
     );
 
@@ -788,7 +800,7 @@ int main(int argc, char* argv[]) {
                   * Matrix_Scale(stamp_size, stamp_size, stamp_size);
                 
             // Desenha um único "pedaço de terra"
-            planeObject.draw(
+            stampObject.draw(
                 model, view, projection,
                 light_source, light_color, ambient_color
             );
@@ -829,11 +841,18 @@ int main(int argc, char* argv[]) {
             light_source, light_color, ambient_color
         );
 
+        model = Matrix_Translate(1.0f,0.0f,0.0f)
+              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
+        bunnyObject.draw(
+            model, view, projection,
+            light_source, light_color, ambient_color
+        );
+
         // Desenhamos o plano do chão
         // Desenha o chão
         model = Matrix_Translate(0.0f, -1.5f, 0.0f)
               * Matrix_Scale(25.0f, 1.0f, 25.0f);
-        planeObject.draw(
+        floorPlaneObject.draw(
             model, view, projection,
             light_source, light_color, ambient_color
         );
@@ -889,27 +908,27 @@ int main(int argc, char* argv[]) {
             // Define o ID para o shader saber como colorir/texturizar
             if (tower->blueprintName.find("CannonTower_V1") != std::string::npos || tower->blueprintName.find("CannonTower_V2") != std::string::npos) {
                 cannonObject.draw(
-                    view, model, projection,
+                    model, view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->blueprintName == "Farm") {
                 farmObject.draw(
-                    view, model, projection,
+                    model, view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->blueprintName == "RocketTower") {
                 rocketObject.draw(
-                    view, model, projection,
+                    model, view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->blueprintName == "MortarTower") {
                 mortarObject.draw(
-                    view, model, projection,
+                    model, view, projection,
                     light_source, light_color, ambient_color
                 );
             } else if (tower->blueprintName == "SlowTower") {
                 slowObject.draw(
-                    view, model, projection,
+                    model, view, projection,
                     light_source, light_color, ambient_color
                 );
             } 
@@ -1095,6 +1114,8 @@ void LoadContext() {
     g_phong_fragment_shader_proj_esfer_id = LoadShader_Fragment("../../shaders/phong/fragment_proj_esfer.glsl");
     g_phong_fragment_shader_proj_planar_id = LoadShader_Fragment("../../shaders/phong/fragment_proj_planar.glsl");
 
+    g_floor_plane_fragment_shader_id = LoadShader_Fragment("../../shaders/floor_plane_fragment.glsl");
+
     g_gouraud_gpu_program_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_id);
     g_gouraud_gpu_program_proj_esfer_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_esfer_id);
     g_gouraud_gpu_program_proj_planar_id = CreateGpuProgram(g_gouraud_vertex_shader_id, g_gouraud_fragment_shader_proj_planar_id);
@@ -1102,6 +1123,8 @@ void LoadContext() {
     g_phong_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_id);
     g_phong_gpu_program_proj_esfer_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_esfer_id);
     g_phong_gpu_program_proj_planar_id = CreateGpuProgram(g_phong_vertex_shader_id, g_phong_fragment_shader_proj_planar_id);
+
+    g_floor_plane_gpu_program_id = CreateGpuProgram(g_phong_vertex_shader_id, g_floor_plane_fragment_shader_id);
 
     // Carregamos as imagens para serem utilizadas como textura
     LoadTextureImage("../../data/grama.jpg", 0);
