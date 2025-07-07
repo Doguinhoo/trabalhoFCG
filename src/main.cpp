@@ -1715,21 +1715,31 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
     if (key == GLFW_KEY_U && action == GLFW_PRESS) {
-        printf("Tentando upgrade da torre '%s'...\n", g_selectedTower->blueprintName.c_str());
 
-        // encontrar o unique_ptr correto no vetor g_towers
-        for (auto& tower_ptr : g_towers) {
-            if (tower_ptr.get() == g_selectedTower) {
-                auto upgraded_tower = g_shop.upgrade(*tower_ptr, g_playerMoney);
-                if (upgraded_tower != nullptr) {
-                    printf("Upgrade bem-sucedido!\n");
-                    g_selectedTower = upgraded_tower.get();
-                    tower_ptr = std::move(upgraded_tower);
-                } else {
-                    printf("Upgrade falhou! (Sem upgrade disponivel ou dinheiro insuficiente)\n");
+        if (g_selectedTower != nullptr) 
+        {
+            // Se uma torre estiver selecionada, então podemos tentar o upgrade
+            printf("Tentando upgrade da torre '%s'...\n", g_selectedTower->blueprintName.c_str());
+
+            // encontrar o unique_ptr correto no vetor g_towers
+            for (auto& tower_ptr : g_towers) {
+                if (tower_ptr.get() == g_selectedTower) {
+                    auto upgraded_tower = g_shop.upgrade(*tower_ptr, g_playerMoney);
+                    if (upgraded_tower != nullptr) {
+                        printf("Upgrade bem-sucedido!\n");
+                        g_selectedTower = upgraded_tower.get();
+                        tower_ptr = std::move(upgraded_tower);
+                    } else {
+                        printf("Upgrade falhou! (Nível máximo ou dinheiro insuficiente)\n");
+                    }
+                    break; // Sai do loop 'for' pois já encontramos a torre
                 }
-                break; // Sai do loop 'for' pois já encontramos a torre
             }
+        }
+        else 
+        {
+            // Se nenhuma torre estiver selecionada, apenas informa o jogador.
+            printf("Nenhuma torre selecionada para o upgrade!\n");
         }
     }
 
