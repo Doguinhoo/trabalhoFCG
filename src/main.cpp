@@ -611,8 +611,10 @@ int main(int argc, char* argv[]) {
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     const glm::vec3 Ka = glm::vec3(0.1f, 0.1f, 0.1f);
-    const glm::vec3 Ks = glm::vec3(0.0f, 0.0f, 0.0f);
-    const float q = 1;
+    const glm::vec3 Ks = glm::vec3(0.2f, 0.2f, 0.2f);
+    const glm::vec3 noKs = glm::vec3(0.0f, 0.0f, 0.0f);
+    const float q = 20;
+    const float noq = 1;
 
     ObjModel spheremodel("../../data/sphere.obj");
     ComputeNormals(&spheremodel);
@@ -629,7 +631,7 @@ int main(int argc, char* argv[]) {
         sphereShape,
         g_range_indicator_gpu_program_id,
         {},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
 
@@ -640,7 +642,7 @@ int main(int argc, char* argv[]) {
         bunnyShape,
         g_phong_gpu_program_proj_planar_id,
         {0},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel planeModel("../../data/plane.obj");
@@ -651,14 +653,14 @@ int main(int argc, char* argv[]) {
         planeShape,
         g_floor_plane_gpu_program_id,
         {0},
-        glm::vec3(0.15f, 0.15f, 0.15f), Ks, q
+        glm::vec3(0.15f, 0.15f, 0.15f), noKs, noq
     );
 
     SceneObject stampObject(
         planeShape,
         g_phong_gpu_program_id,
         {10},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel rocketmodel("../../data/rocket_tower.obj");
@@ -678,7 +680,7 @@ int main(int argc, char* argv[]) {
         farmShape,
         g_phong_gpu_program_id,
         {3},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel cannonmodel("../../data/cannon_tower.obj");
@@ -708,7 +710,7 @@ int main(int argc, char* argv[]) {
         slowShape,
         g_phong_gpu_program_id,
         {7},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel portalmodel("../../data/portal.obj");
@@ -718,7 +720,7 @@ int main(int argc, char* argv[]) {
         portalShape,
         g_phong_gpu_program_id,
         {8},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel castlemodel("../../data/castle.obj");
@@ -728,7 +730,7 @@ int main(int argc, char* argv[]) {
         castleShape,
         g_phong_gpu_program_id,
         {9},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel carmodel("../../data/car.obj");
@@ -765,7 +767,7 @@ int main(int argc, char* argv[]) {
         sphereShape,
         g_skybox_gpu_program_id,
         {14},
-        Ka, Ks, q
+        Ka, noKs, noq
     );
 
     ObjModel *extraModel;
@@ -956,7 +958,7 @@ int main(int argc, char* argv[]) {
         g_view_matrix = view;
         g_projection_matrix = projection;
 
-        const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
+        const glm::vec4 light_source = glm::vec4(-1.0f, 1.0f, 0.0f, 0.0f);
         const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
         const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
