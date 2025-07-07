@@ -142,7 +142,7 @@ float prev_time = (float)glfwGetTime();
 float delta_t;
 
 // velocidade da camera
-float speed = 2.5f;
+float speed = 4.0f;
 
 // Teclas de movimentação
 bool press_W = false;
