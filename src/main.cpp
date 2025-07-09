@@ -965,7 +965,7 @@ int main(int argc, char* argv[]) {
         g_view_matrix = view;
         g_projection_matrix = projection;
 
-        const glm::vec4 light_source = glm::vec4(-1.0f, 1.0f, 0.0f, 0.0f);
+        const glm::vec4 light_source = glm::vec4(-0.5f, 1.0f, -1.0f, 0.0f);
         const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
         const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
