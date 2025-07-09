@@ -21,7 +21,7 @@ int EnemyManager::updateAll(float dt, float& playerMoney) {
                     if (e->killedByPlayer) {
                         // Foi morto por uma torre, dá dinheiro
                         playerMoney += e->reward;
-                        printf("+%d de dinheiro! Inimigo derrotado.\n", e->reward);
+                        printf("+%.0f de dinheiro! Inimigo derrotado.\n", e->reward);
                     } else {
                         // Chegou ao fim do caminho, não dá dinheiro e incrementa o contador
                         enemies_that_finished++;
@@ -45,7 +45,7 @@ void EnemyManager::cleanup(float& playerMoney) {
                 if (!e->alive) {
                     // Se o inimigo está morto, adiciona a recompensa
                     playerMoney += e->reward;
-                    printf("+%d de dinheiro! Inimigo derrotado.\n", e->reward);
+                    printf("+%.0f de dinheiro! Inimigo derrotado.\n", e->reward);
                     return true; // Retorna true para marcar para remoção
                 }
                 return false;
