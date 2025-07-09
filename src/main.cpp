@@ -660,7 +660,8 @@ int main(int argc, char* argv[]) {
 
     SceneObject stampObject(
         planeShape,
-        g_phong_gpu_program_id,
+        // g_phong_gpu_program_id,
+        g_floor_plane_gpu_program_id,
         {10},
         Ka, noKs, noq
     );
