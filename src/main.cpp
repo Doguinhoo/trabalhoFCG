@@ -476,10 +476,12 @@ void ResetGame() {
     g_cameraMode = CameraMode::ORBIT;
 }
 
-void SellSelectedTower() {
-    if (!g_selectedTower) return;
+void SellSelectedTower()
+{
+    if (!g_selectedTower) 
+        return;
+    std::string blueprintNameToSell = g_selectedTower->blueprintName;
 
-    // Encontra e remove a torre do vetor g_towers
     g_towers.erase(std::remove_if(g_towers.begin(), g_towers.end(), 
         [](const std::unique_ptr<Tower>& tower) {
             return tower.get() == g_selectedTower;
@@ -487,13 +489,13 @@ void SellSelectedTower() {
         g_towers.end()
     );
 
-    // Devolve 75% do custo da torre para o jogador 
-    const auto& bp = g_shop.getBlueprint(g_selectedTower->blueprintName);
+    const auto& bp = g_shop.getBlueprint(blueprintNameToSell);
     if (bp) {
         g_playerMoney += bp->cost * 0.75f;
     }
 
     printf("Torre vendida!\n");
+
     g_selectedTower = nullptr;
     g_isTowerInfoWindowOpen = false;
 }
