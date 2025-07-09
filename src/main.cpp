@@ -137,6 +137,8 @@ GLuint g_floor_plane_gpu_program_id;
 GLuint g_range_indicator_gpu_program_id;
 GLuint g_skybox_gpu_program_id;
 
+GLuint g_skybox_cubemap;
+
 // pos inicial
 glm::vec4 g_camera_position_c  = glm::vec4(0.0f,1.0f,3.5f,1.0f); 
 float prev_time = (float)glfwGetTime();
@@ -729,12 +731,12 @@ int main(int argc, char* argv[]) {
         Ka, Ks, q
     );
 
-    // ObjModel skyboxModel("../../data/cube.obj");
-    // Shape skyboxShape(skyboxModel, "the_cube");
+    ObjModel cubeModel("../../data/cube.obj");
+    Shape cubeShape(cubeModel, "the_cube");
     SceneObject skyboxObject(
-        sphereShape,
+        cubeShape,
         g_skybox_gpu_program_id,
-        {11},
+        {(GLint) g_skybox_cubemap},
         Ka, Ks, q
     );
 
@@ -763,6 +765,9 @@ int main(int argc, char* argv[]) {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
+
+    // Ativa para a skybox
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     SetupGame();
 
@@ -899,16 +904,6 @@ int main(int argc, char* argv[]) {
         const glm::vec4 light_source = glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
         const glm::vec3 light_color = glm::vec3(1.0f, 1.0f, 1.0f);
         const glm::vec3 ambient_color = glm::vec3(1.0f, 1.0f, 1.0f);
-
-        // TODO deletar
-        // glDepthFunc(GL_LEQUAL); 
-        // model = Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z) 
-        //       * Matrix_Scale(95.0f, 95.0f, 95.0f);
-        // sphereObject.draw(
-        //     model, view, projection,
-        //     light_source, light_color, ambient_color
-        // );
-        // glDepthFunc(GL_LESS); 
 
         float path_length = g_enemyPath->getTotalLength();
         float stamp_spacing = 1.5f; // Distância entre cada carimbo de textura
@@ -1103,7 +1098,7 @@ int main(int argc, char* argv[]) {
         glDepthFunc(GL_LEQUAL);
         glFrontFace(GL_CW);
         model = Matrix_Identity();
-        // model = Matrix_Translate(3.0f, 0.0f, 3.0f);
+        glCheckError();
         skyboxObject.draw(
             model, view, projection,
             light_source, light_color, ambient_color
@@ -1292,7 +1287,16 @@ void LoadContext() {
     LoadTextureImage("../../data/portal.jpg", 8);
     LoadTextureImage("../../data/castle.jpg", 9);
     LoadTextureImage("../../data/caminho.jpg", 10);
-    LoadTextureImage("../../data/skysphere.jpg", 11);
+    g_skybox_cubemap = LoadCubeMap(
+        {
+            "../../data/skybox/right.jpg",
+            "../../data/skybox/left.jpg",
+            "../../data/skybox/top.jpg",
+            "../../data/skybox/bottom.jpg",
+            "../../data/skybox/front.jpg",
+            "../../data/skybox/back.jpg",
+        }
+    );
 }
 
 void UnloadContext() {

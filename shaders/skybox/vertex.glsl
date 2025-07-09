@@ -4,7 +4,6 @@
 layout (location = 0) in vec4 model_coefficients;
 
 // Matrizes computadas no código C++ e enviadas para a GPU
-uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
@@ -28,7 +27,6 @@ void main() {
 
     vec4 pos = projection * mat4(mat3(view)) * model_coefficients;
     gl_Position = pos.xyww;
-    // gl_Position = projection * view * model * model_coefficients;
 
     position_model = model_coefficients; 
 }
