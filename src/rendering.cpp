@@ -595,6 +595,56 @@ void LoadTextureImage(const char* filename, GLuint number) {
     stbi_image_free(data);
 }
 
+// Função que carrega um cubemap para ser utilizado como textura
+GLuint LoadCubeMap(std::vector<std::string> filenames) { 
+    // Agora criamos objetos na GPU com OpenGL para armazenar a textura
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);
+
+    glActiveTexture(GL_TEXTURE_CUBE_MAP);
+
+    stbi_set_flip_vertically_on_load(false);
+    for (size_t i = 0; i < 6; i++) {
+        printf("Carregando imagem \"%s\"... ", filenames[i].c_str());
+
+        // Primeiro fazemos a leitura da imagem do disco
+        int width;
+        int height;
+        int channels;
+        unsigned char *data = stbi_load(filenames[i].c_str(), &width, &height, &channels, 3);
+
+        if (data == NULL) {
+            fprintf(stderr, "ERROR: Cannot open image file \"%s\".\n", filenames[i].c_str());
+            std::exit(EXIT_FAILURE);
+        }
+
+        // Agora enviamos a imagem lida do disco para a GPU
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+        printf("OK (%dx%d).\n", width, height);
+
+        stbi_image_free(data);
+
+    }
+
+    // Veja slides 95-96 do documento Aula_20_Mapeamento_de_Texturas.pdf
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);
+
+    // Parâmetros de amostragem da textura.
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    return texture_id;
+}
+
 // Função auxilar, utilizada pelas duas funções acima. Carrega código de GPU de
 // um arquivo GLSL e faz sua compilação.
 void LoadShader(const char* filename, GLuint shader_id) {

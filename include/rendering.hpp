@@ -76,6 +76,7 @@ typedef std::map<std::string, SceneObject> VirtualScene;
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
 GLuint CreateGpuProgramFromFiles(const char *vertex_shader_file_name, const char *fragment_shader_file_name); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename, GLuint number);
+GLuint LoadCubeMap(std::vector<std::string> filenames);
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
 GLuint LoadShader_Vertex(const char* filename);
 GLuint LoadShader_Fragment(const char* filename);
