@@ -108,7 +108,7 @@ float g_TorsoPositionY = 0.0f;
 bool g_UsePerspectiveProjection = true;
 
 // Variável que controla se o texto informativo será mostrado na tela.
-bool g_ShowInfoText = true;
+bool g_ShowInfoText = false;
 
 GLuint g_gouraud_vertex_shader_id;
 GLuint g_phong_vertex_shader_id;
@@ -147,7 +147,7 @@ float prev_time = (float)glfwGetTime();
 float delta_t;
 
 // velocidade da camera
-float speed = 4.0f;
+float speed = 6.0f;
 
 // Teclas de movimentação
 bool press_W = false;
@@ -1134,6 +1134,14 @@ int main(int argc, char* argv[]) {
             model = Matrix_Translate(g_selectedTower->pos.x, g_selectedTower->pos.y, g_selectedTower->pos.z)
                     * Matrix_Scale(g_selectedTower->range, g_selectedTower->range, g_selectedTower->range);
             
+            glFrontFace(GL_CW);
+            // CORREÇÃO: Desenha a geometria da esfera em vez do plano
+            rangeIndicatorObject.draw(
+                model, view, projection,
+                light_source, light_color, ambient_color
+            );
+
+            glFrontFace(GL_CCW);
             // CORREÇÃO: Desenha a geometria da esfera em vez do plano
             rangeIndicatorObject.draw(
                 model, view, projection,
@@ -1498,7 +1506,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
-    
+        
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
         g_LastCursorPosX = xpos;
@@ -1683,7 +1691,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Farm comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
             } else {
-                printf("Dinheiro insuficiente para comprar Canhao!\n");
+                printf("Dinheiro insuficiente para comprar Farm!\n");
             }
         }
     }
@@ -1696,7 +1704,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
                 g_towers.push_back(std::move(new_tower));
                 printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
             } else {
-                printf("Dinheiro insuficiente para comprar Canhao!\n");
+                printf("Dinheiro insuficiente para comprar Rocket!\n");
             }
         }
     }
@@ -1707,9 +1715,9 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             auto new_tower = g_shop.buy("MortarTower_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
-                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+                printf("Torre de Mortar comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
             } else {
-                printf("Dinheiro insuficiente para comprar Canhao!\n");
+                printf("Dinheiro insuficiente para comprar Mortar!\n");
             }
         }
     }
@@ -1720,9 +1728,9 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             auto new_tower = g_shop.buy("SlowTower_V1", g_playerMoney, pos);
             if (new_tower) {
                 g_towers.push_back(std::move(new_tower));
-                printf("Torre de Rocket comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
+                printf("Torre de Slow comprada na posição (%.1f, %.1f)\n", pos.x, pos.z);
             } else {
-                printf("Dinheiro insuficiente para comprar Canhao!\n");
+                printf("Dinheiro insuficiente para comprar Slow!\n");
             }
         }
     }
@@ -1794,7 +1802,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal
-void ErrorCallback(int error, const char* description)
-{
+void ErrorCallback(int error, const char* description) {
     fprintf(stderr, "ERROR: GLFW: %s\n", description);
 }
