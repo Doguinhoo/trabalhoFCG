@@ -1019,9 +1019,10 @@ int main(int argc, char* argv[]) {
         glm::vec3 castle_tangent = glm::normalize(castle_pos - g_enemyPath->getPoint(0.99f));
         float castle_angle = atan2(castle_tangent.x, castle_tangent.z);
 
-        model = Matrix_Translate(castle_pos.x, 0.2f, castle_pos.z)
+        model = Matrix_Translate(castle_pos.x, 0.8f, castle_pos.z)
                 * Matrix_Scale (2.0f, 2.0f, 2.0f)
-                * Matrix_Rotate_Y(-castle_angle);
+                * Matrix_Rotate_Y(-castle_angle)
+                * Matrix_Rotate_Z(0.20);
         castleObject.draw(
             model, view, projection,
             light_source, light_color, ambient_color
