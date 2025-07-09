@@ -51,13 +51,14 @@ bool CheckCameraCollision(
     if (proposed_position.x > map_boundary || proposed_position.x < -map_boundary) {
         return true; 
     }
+    
     if (proposed_position.z > map_boundary || proposed_position.z < -map_boundary) {
         return true; 
     }
 
     // Colisão com cada uma das torres
     for (const auto& tower : towers) {
-        float min_dist_sq = pow(tower->hitbox.radius + camera_radius, 2) - 2.5f;
+        float min_dist_sq = (tower->hitbox.radius + camera_radius) * 2 - 2.5f;
         if (distance(glm::vec3(proposed_position), tower->pos) < min_dist_sq) {
             return true; 
         }

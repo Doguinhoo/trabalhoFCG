@@ -1736,12 +1736,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
    // Pressionar 'V' para vender
     if (key == GLFW_KEY_V && action == GLFW_PRESS && g_selectedTower) {
-        SellSelectedTower(); // Chama a função que você já tem
+        SellSelectedTower(); 
     }
 
     // Pressionar 'F' para alternar a câmera
     if (key == GLFW_KEY_F && action == GLFW_PRESS && g_selectedTower) {
-        ToggleTowerFOV(); // Chama a função que você já tem
+        ToggleTowerFOV(); 
     }
 
     if (key == GLFW_KEY_Q && action == GLFW_PRESS && g_selectedTower != nullptr) {
