@@ -8,7 +8,7 @@ Implementamos um jogo no estilo Tower Defense, um gênero de estratégia em que 
 
 ### Giovanni Cabreira Milanez
 - Introdução dos modelos 3D e texturas utilizadas
-- Implementação da lóglica do jogo
+- Implementação da lógica do jogo
 
 ## Uso de ferramentas de inteligência artificial
 O ChatGPT foi utilizado no processo de debugging da aplicação. A ferramenta foi úlil para esse propósito, mas não foi utilizada para o desenvolvimento do código.
