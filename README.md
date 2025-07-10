@@ -53,3 +53,5 @@ Caso exista uma torre nessa posição, ela é selecionada. O usuário então pod
 - Tecla V: vende a torre, recuperando parte do dinheito gasto para comprá-la
 - Tecla F: entra no modo de câmera da torre
 - Tecla Q: muda o foco da torre
+
+A tecla G inicia uma rodada caso uma não estiver em progresso.
