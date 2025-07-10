@@ -3,14 +3,14 @@
 
 // SOBRE AS OUTRAS COLISÕES:
 
-// Colisão entre Inimigo e a Torre:
+// Colisão entre Inimigo e a Torre(Esfera-Esfera):
 // As colisões entre torres e inimigos foram desenvolvidas nas devidas 
 // estruturas, onde o cálculo se da pela intersecção de esferas
 // definidas na hitbox dos inimigos e no range das torres, feito calculando
 // o quadrado da distância entre os centros com o quadrado da soma dos raios,
 // onde se dist^2 <= (r1+r2)^2, as esferas se intersectam.
 
-// Selecionar torres:
+// Selecionar torres (Ponto-esfera):
 // lógica principal na função glm::vec3 GetCursorWorldPosition(GLFWwindow* window)
 // onde foi declarada na main pois estava tendo conflito com o glad.h
 // Converte a posição do cursor do mouse para um sistema de coordenadas normalizadas,
